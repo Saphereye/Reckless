@@ -100,9 +100,6 @@ pub fn start(td: &mut ThreadData, report: Report, thread_count: usize) {
             rm.previous_score = rm.score;
         }
 
-        let mut delta = 15;
-        let mut reduction = 0;
-
         for index in 0..td.multi_pv {
             td.pv_index = index;
 
@@ -117,7 +114,8 @@ pub fn start(td: &mut ThreadData, report: Report, thread_count: usize) {
             }
 
             // Aspiration Windows
-            delta += average[td.pv_index] * average[td.pv_index] / 25833;
+            let mut reduction = 0;
+            let mut delta = 15 + average[td.pv_index] * average[td.pv_index] / 25833;
 
             let mut alpha = (average[td.pv_index] - delta).max(-Score::INFINITE);
             let mut beta = (average[td.pv_index] + delta).min(Score::INFINITE);
@@ -496,13 +494,13 @@ fn search<NODE: NodeType>(
         && is_valid(tt_score)
         && !is_decisive(tt_score);
 
-    let mut improvement = 0;
-
-    if is_valid(td.stack[ply - 2].eval) && !in_check {
-        improvement = eval - td.stack[ply - 2].eval;
-    } else if is_valid(td.stack[ply - 4].eval) && !in_check {
-        improvement = eval - td.stack[ply - 4].eval;
-    }
+    let improvement = if !in_check && is_valid(td.stack[ply - 2].eval) {
+        eval - td.stack[ply - 2].eval
+    } else if !in_check && is_valid(td.stack[ply - 4].eval) {
+        eval - td.stack[ply - 4].eval
+    } else {
+        0
+    };
 
     let improving = improvement > 0;
 
@@ -678,9 +676,7 @@ fn search<NODE: NodeType>(
             return (2 * score + beta) / 3;
         }
         // Negative Extensions
-        else if tt_score >= beta {
-            extension = -2;
-        } else if cut_node {
+        else if tt_score >= beta || cut_node {
             extension = -2;
         }
     }
@@ -688,8 +684,9 @@ fn search<NODE: NodeType>(
     let mut best_move = Move::NULL;
     let mut bound = Bound::Upper;
 
-    let mut quiet_moves = ArrayVec::<Move, 32>::new();
-    let mut noisy_moves = ArrayVec::<Move, 32>::new();
+    const MAX_HISTORY_MOVES: usize = 32;
+    let mut quiet_moves = ArrayVec::<Move, MAX_HISTORY_MOVES>::new();
+    let mut noisy_moves = ArrayVec::<Move, MAX_HISTORY_MOVES>::new();
 
     let mut move_count = 0;
     let mut move_picker = MovePicker::new(tt_move);
@@ -974,7 +971,7 @@ fn search<NODE: NodeType>(
             }
         }
 
-        if mv != best_move && move_count < 32 {
+        if mv != best_move && move_count < MAX_HISTORY_MOVES as i32 {
             if is_quiet {
                 quiet_moves.push(mv);
             } else {
