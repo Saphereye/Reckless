@@ -61,6 +61,18 @@ impl Board {
         Self::from_fen("rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR w KQkq - 0 1").unwrap()
     }
 
+    pub fn state_stack_len(&self) -> usize {
+        self.state_stack.len()
+    }
+
+    pub fn state_stack_key(&self, index: usize) -> u64 {
+        self.state_stack[index].key
+    }
+
+    pub fn plies_from_null(&self) -> usize {
+        self.state.plies_from_null
+    }
+
     pub const fn is_frc(&self) -> bool {
         self.frc
     }

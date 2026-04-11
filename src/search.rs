@@ -262,6 +262,42 @@ pub fn start(td: &mut ThreadData, report: Report, thread_count: usize) {
     td.previous_best_score = td.root_moves[0].score;
 }
 
+fn is_shuffling(td: &ThreadData, mv: Move, ply: isize) -> bool {
+    if mv.is_noisy() {
+        return false;
+    }
+
+    if td.board.halfmove_clock() < 11 {
+        return false;
+    }
+
+    if td.board.plies_from_null() <= 6 {
+        return false;
+    }
+
+    if ply < 18 {
+        return false;
+    }
+
+    let current_key = td.board.hash();
+    let len = td.board.state_stack_len();
+
+    if len < 6 {
+        return false;
+    }
+
+    for n in 1..=3 {
+        let idx = len.wrapping_sub(2 * n);
+        if idx >= len {
+            return false;
+        }
+        if td.board.state_stack_key(idx) == current_key {
+            return true;
+        }
+    }
+    false
+}
+
 fn search<NODE: NodeType>(
     td: &mut ThreadData, mut alpha: i32, mut beta: i32, depth: i32, cut_node: bool, ply: isize,
 ) -> i32 {
@@ -494,7 +530,8 @@ fn search<NODE: NodeType>(
         && tt_depth >= depth - 3
         && tt_bound != Bound::Upper
         && is_valid(tt_score)
-        && !is_decisive(tt_score);
+        && !is_decisive(tt_score)
+        && !is_shuffling(td, tt_move, ply);
 
     let mut improvement = 0;
 
