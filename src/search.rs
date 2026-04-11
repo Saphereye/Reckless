@@ -279,23 +279,14 @@ fn is_shuffling(td: &ThreadData, mv: Move, ply: isize) -> bool {
         return false;
     }
 
-    let current_key = td.board.hash();
-    let len = td.board.state_stack_len();
+    let prev2 = td.stack[ply - 2].mv;
+    let prev4 = td.stack[ply - 4].mv;
 
-    if len < 6 {
+    if !prev2.is_present() || !prev4.is_present() {
         return false;
     }
 
-    for n in 1..=3 {
-        let idx = len.wrapping_sub(2 * n);
-        if idx >= len {
-            return false;
-        }
-        if td.board.state_stack_key(idx) == current_key {
-            return true;
-        }
-    }
-    false
+    mv.from() == prev2.to() && prev2.from() == prev4.to()
 }
 
 fn search<NODE: NodeType>(
