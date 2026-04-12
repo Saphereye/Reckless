@@ -232,7 +232,18 @@ pub fn start(td: &mut ThreadData, report: Report, thread_count: usize) {
 
             let best_move_stability = 1.0 + best_move_changes as f32 / 4.0;
 
-            nodes_factor * pv_stability * eval_stability * score_trend * best_move_stability
+            let singularity_factor = {
+                let rm0 = &td.root_moves[0];
+                let rm1 = td.root_moves.get(1);
+                if let Some(rm1) = rm1 {
+                    let gap = (rm0.score - rm1.score) as f32;
+                    (1.0 - gap / 3000.0).clamp(0.75, 1.0)
+                } else {
+                    0.75
+                }
+            };
+
+            nodes_factor * pv_stability * eval_stability * score_trend * best_move_stability * singularity_factor
         };
 
         if td.time_manager.soft_limit(td, multiplier) {
