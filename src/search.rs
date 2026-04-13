@@ -658,7 +658,7 @@ fn search<NODE: NodeType>(
 
         td.stack[ply].excluded = tt_move;
         td.stack[ply].mv = Move::NULL;
-        singular_score = search::<NonPV>(td, singular_beta - 1, singular_beta, singular_depth, cut_node, ply);
+        singular_score = search::<NonPV>(td, singular_beta - 1, singular_beta, singular_depth, false, ply);
         td.stack[ply].excluded = Move::NULL;
 
         if td.shared.status.get() == Status::STOPPED {
@@ -788,6 +788,7 @@ fn search<NODE: NodeType>(
             reduction += 1306 * alpha_raises;
 
             reduction += 546 * (is_valid(tt_score) && tt_score <= alpha) as i32;
+
             reduction += 322 * (is_valid(tt_score) && tt_depth < depth) as i32;
 
             if is_quiet {
