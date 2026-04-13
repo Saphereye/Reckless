@@ -105,7 +105,7 @@ impl PstAccumulator {
     pub fn update(&mut self, prev: &Self, board: &Board, king: Square, pov: Color) {
         let PstDelta { mv, piece, captured } = self.delta;
 
-        let resulting_piece = mv.promotion_piece().unwrap_or_else(|| piece.piece_type());
+        let resulting_piece = if mv.is_promotion() { mv.promo_piece_type() } else { piece.piece_type() };
 
         let add1 = pst_index(piece.piece_color(), resulting_piece, mv.to(), king, pov);
         let sub1 = pst_index(piece.piece_color(), piece.piece_type(), mv.from(), king, pov);
@@ -197,7 +197,7 @@ impl PstAccumulator {
 }
 
 const REGISTERS: usize = 8;
-const _: () = assert!(L1_SIZE % (REGISTERS * simd::I16_LANES) == 0);
+const _: () = assert!(L1_SIZE.is_multiple_of(REGISTERS * simd::I16_LANES));
 
 unsafe fn apply_changes(entry: &mut CacheEntry, adds: ArrayVec<PstFeature, 64>, subs: ArrayVec<PstFeature, 64>) {
     let mut registers: [_; REGISTERS] = std::mem::zeroed();

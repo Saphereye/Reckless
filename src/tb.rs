@@ -79,8 +79,8 @@ fn reckless_move_to_tb_move(mv: Move) -> TbMove {
 
     let mut tb_move: TbMove = (from << 6) | to;
 
-    if let Some(pt) = mv.promotion_piece() {
-        let promotion_bits = promo_bits_from_piece(pt) & 0x7;
+    if mv.is_promotion() {
+        let promotion_bits = promo_bits_from_piece(mv.promo_piece_type()) & 0x7;
         tb_move |= promotion_bits << 12;
     }
 
@@ -175,7 +175,7 @@ pub fn rank_rootmoves(td: &mut ThreadData) {
             td.root_in_tb = true;
 
             // Keep probing in search if DTZ is not available and we are winning
-            td.stop_probing_tb = td.root_moves[0].score < Score::ZERO;
+            td.stop_probing_tb = td.root_moves[0].tb_score <= Score::ZERO;
         }
     }
 }
