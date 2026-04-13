@@ -234,14 +234,17 @@ pub fn start(td: &mut ThreadData, report: Report, thread_count: usize) {
 
             let singularity_factor = {
                 let best_move = &td.root_moves[0];
-                let second_best_move = td.root_moves.get(1);
-                if let Some(rm1) = second_best_move {
+                let second_best = td.root_moves.iter().skip(1).find(|rm| rm.score != -Score::INFINITE);
+
+                if let Some(rm1) = second_best {
                     let gap = (best_move.score - rm1.score) as f32;
-                    let depth_scale = (td.completed_depth as f32 / 20.0).min(1.0);
-                    let divisor = 3000.0 + 2000.0 * depth_scale;
-                    (1.0 - gap / divisor).clamp(0.85, 1.0)
+
+                    let depth_scale = (td.completed_depth as f32 / 20.0).min(2.0);
+                    let divisor = 3000.0 + 1200.0 * depth_scale;
+
+                    (1.0 - gap / divisor).clamp(0.78, 1.0)
                 } else {
-                    0.85
+                    0.78
                 }
             };
 
