@@ -369,6 +369,15 @@ fn search<NODE: NodeType>(
         }
     }
 
+    if tt_move.is_present() && !NODE::ROOT && !excluded {
+        if tt_move.is_quiet() {
+            let history = td.quiet_history.get(td.board.all_threats(), stm, tt_move);
+            if history < -8000 && depth <= 4 {
+                tt_move = Move::NULL;
+            }
+        }
+    }
+
     // Tablebases Probe
     #[cfg(feature = "syzygy")]
     if !NODE::ROOT
