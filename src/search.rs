@@ -1,3 +1,4 @@
+use crate::parameters::*;
 use std::sync::atomic::Ordering;
 
 use crate::{
@@ -1359,10 +1360,11 @@ fn update_correction_histories(td: &mut ThreadData, depth: i32, diff: i32, ply: 
 }
 
 fn update_continuation_histories(td: &mut ThreadData, ply: isize, piece: Piece, sq: Square, bonus: i32) {
-    for offset in [1, 2, 4, 6] {
-        let entry = &td.stack[ply - offset];
+    let bonus_mult = vec![v1(), v2(), v3(), v4()];
+    for i in 0..4 {
+        let entry = &td.stack[ply - (i * 2)];
         if entry.mv.is_present() {
-            td.continuation_history.update(entry.conthist, piece, sq, bonus / ((offset as i32 / 2) + 1));
+            td.continuation_history.update(entry.conthist, piece, sq, bonus / bonus_mult[i as usize]);
         }
     }
 }
