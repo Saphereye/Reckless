@@ -1362,11 +1362,20 @@ fn update_correction_histories(td: &mut ThreadData, depth: i32, diff: i32, ply: 
 
 fn update_continuation_histories(td: &mut ThreadData, ply: isize, piece: Piece, sq: Square, bonus: i32) {
     let offsets: [isize; 4] = [1, 2, 4, 6];
-    let bonus_mult = [v1(), v2(), v3(), v4()];
+    let bonus_mult = [b1(), b2(), b3(), b4()];
+    let cmhc_multipliers = [c1(), c2(), c3(), c4(), c5()];
+    let mut positive_count = 0usize;
+
     for (i, &offset) in offsets.iter().enumerate() {
         let entry = &td.stack[ply - offset];
         if entry.mv.is_present() {
-            td.continuation_history.update(entry.conthist, piece, sq, (bonus * bonus_mult[i]) / 1024);
+            let hist_val = td.continuation_history.get(entry.conthist, piece, sq);
+            if hist_val > 0 {
+                positive_count += 1;
+            }
+            let multiplier = cmhc_multipliers[positive_count];
+            let scaled = (bonus * bonus_mult[i] * multiplier) / (1024 * 256);
+            td.continuation_history.update(entry.conthist, piece, sq, scaled);
         }
     }
 }
