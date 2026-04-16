@@ -1361,11 +1361,12 @@ fn update_correction_histories(td: &mut ThreadData, depth: i32, diff: i32, ply: 
 }
 
 fn update_continuation_histories(td: &mut ThreadData, ply: isize, piece: Piece, sq: Square, bonus: i32) {
-    let bonus_mult = vec![v1(), v2(), v3(), v4()];
-    for i in 0..4 {
-        let entry = &td.stack[ply - (i * 2)];
+    let offsets: [isize; 4] = [1, 2, 4, 6];
+    let bonus_mult = [v1(), v2(), v3(), v4()];
+    for (i, &offset) in offsets.iter().enumerate() {
+        let entry = &td.stack[ply - offset];
         if entry.mv.is_present() {
-            td.continuation_history.update(entry.conthist, piece, sq, bonus / bonus_mult[i as usize]);
+            td.continuation_history.update(entry.conthist, piece, sq, bonus / bonus_mult[i]);
         }
     }
 }
