@@ -521,12 +521,13 @@ fn search<NODE: NodeType>(
     if !tt_pv
         && !in_check
         && !excluded
-        && estimated_score >= beta
         && estimated_score
-            >= beta + 1165 * depth * depth / 128 + 25 * depth - (80 * improving as i32)
-                + 560 * correction_value.abs() / 1024
-                - 59 * (td.board.all_threats() & td.board.colors(stm)).is_empty() as i32
-                + 30
+            >= beta
+                + (1165 * depth * depth / 128 + 25 * depth - (80 * improving as i32)
+                    + 560 * correction_value.abs() / 1024
+                    - 59 * (td.board.all_threats() & td.board.colors(stm)).is_empty() as i32
+                    + 30)
+                    .max(0)
         && !is_loss(beta)
         && !is_win(estimated_score)
     {
