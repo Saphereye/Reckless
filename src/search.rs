@@ -1362,8 +1362,8 @@ fn update_correction_histories(td: &mut ThreadData, depth: i32, diff: i32, ply: 
 
 fn update_continuation_histories(td: &mut ThreadData, ply: isize, piece: Piece, sq: Square, bonus: i32) {
     let offsets: [isize; 4] = [1, 2, 4, 6];
-    let bonus_mult = [b1(), b2(), b3(), b4()];
-    let cmhc_multipliers = [c1(), c2(), c3(), c4(), c5()];
+    let bonus_mult = [1025, 968, 908, 1049];
+    let cmhc_multipliers = [137, 311, 199, 214, 193];
     let mut positive_count = 0usize;
 
     for (i, &offset) in offsets.iter().enumerate() {
