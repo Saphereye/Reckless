@@ -4,7 +4,8 @@ use crate::{
         pawn_attacks, pawn_attacks_setwise, queen_attacks, ray_pass, rook_attacks,
     },
     types::{
-        Bitboard, Castling, CastlingKind, Color, Move, PAWN_HOME_RANK, PROMO_RANK, Piece, PieceType, Square, ZOBRIST,
+        Bitboard, Castling, CastlingKind, Color, File, Move, PAWN_HOME_RANK, PROMO_RANK, Piece, PieceType, Square,
+        ZOBRIST,
     },
 };
 
@@ -24,7 +25,6 @@ mod see;
 struct InternalState {
     key: u64,
     pawn_key: u64,
-    minor_key: u64,
     non_pawn_keys: [u64; Color::NUM],
     en_passant: Square,
     castling: Castling,
@@ -84,10 +84,6 @@ impl Board {
 
     pub const fn pawn_key(&self) -> u64 {
         self.state.pawn_key
-    }
-
-    pub const fn minor_key(&self) -> u64 {
-        self.state.minor_key
     }
 
     pub const fn non_pawn_key(&self, color: Color) -> u64 {
@@ -228,10 +224,6 @@ impl Board {
             self.state.pawn_key ^= key;
         } else {
             self.state.non_pawn_keys[piece.piece_color()] ^= key;
-
-            if [PieceType::Knight, PieceType::Bishop, PieceType::King].contains(&piece.piece_type()) {
-                self.state.minor_key ^= key;
-            }
         }
     }
 
@@ -347,13 +339,7 @@ impl Board {
 
         if piece.piece_type() == PieceType::King {
             if mv.is_castling() {
-                let kind = match to {
-                    Square::G1 => CastlingKind::WhiteKingside,
-                    Square::C1 => CastlingKind::WhiteQueenside,
-                    Square::G8 => CastlingKind::BlackKingside,
-                    Square::C8 => CastlingKind::BlackQueenside,
-                    _ => return false,
-                };
+                let kind = CastlingKind::KINDS[stm][(to.file() == File::G) as usize];
 
                 return self.castling().is_allowed(kind)
                     && (self.castling_path[kind] & self.occupancies()).is_empty()
@@ -430,7 +416,6 @@ impl Board {
         // This "hack" is used to speed up the implementation of `Board::is_legal`.
         let stm = self.side_to_move();
         let occupancies = self.occupancies() ^ self.colored_pieces(stm, PieceType::King);
-
         let mut threats = pawn_attacks_setwise(self.colored_pieces(!stm, PieceType::Pawn), !stm);
         self.state.piece_threats[PieceType::Pawn] = threats;
 
@@ -466,24 +451,27 @@ impl Board {
             | self.piece_threats(PieceType::Rook)
             | self.piece_threats(PieceType::Queen)
             | self.piece_threats(PieceType::King);
-    }
-
-    /// Updates the checkers bitboard to mark opponent pieces currently threatening our king,
-    /// and our pinned pieces that cannot move without leaving the king in check.
-    pub fn update_king_threats(&mut self) {
-        let stm = self.side_to_move();
-        let our_king = self.king_square(stm);
-
-        self.state.pinned = [Bitboard::default(); 2];
-        self.state.pinners = [Bitboard::default(); 2];
-        self.state.checkers = (pawn_attacks(our_king, stm) & self.colored_pieces(!stm, PieceType::Pawn))
-            | (knight_attacks(our_king) & self.colored_pieces(!stm, PieceType::Knight));
 
         let diagonal = self.pieces2(PieceType::Bishop, PieceType::Queen);
         let orthogonal = self.pieces2(PieceType::Rook, PieceType::Queen);
 
+        self.state.pinned = [Bitboard::default(); 2];
+        self.state.pinners = [Bitboard::default(); 2];
+
         for color in [Color::White, Color::Black] {
             let king = self.king_square(color);
+
+            if color == stm {
+                self.state.checkers = (pawn_attacks(king, stm) & self.colored_pieces(!stm, PieceType::Pawn))
+                    | (knight_attacks(king) & self.colored_pieces(!stm, PieceType::Knight));
+            } else {
+                self.state.checking_squares[PieceType::Pawn] = pawn_attacks(king, !stm);
+                self.state.checking_squares[PieceType::Knight] = knight_attacks(king);
+                self.state.checking_squares[PieceType::Bishop] = bishop_attacks(king, self.occupancies());
+                self.state.checking_squares[PieceType::Rook] = rook_attacks(king, self.occupancies());
+                self.state.checking_squares[PieceType::Queen] =
+                    self.checking_squares(PieceType::Bishop) | self.checking_squares(PieceType::Rook);
+            }
 
             let diagonal = diagonal & bishop_attacks(king, self.colors(!color)) & self.colors(!color);
             let orthogonal = orthogonal & rook_attacks(king, self.colors(!color)) & self.colors(!color);
@@ -503,20 +491,11 @@ impl Board {
                 }
             }
         }
-
-        let their_king = self.king_square(!stm);
-        self.state.checking_squares[PieceType::Pawn] = pawn_attacks(their_king, !stm);
-        self.state.checking_squares[PieceType::Knight] = knight_attacks(their_king);
-        self.state.checking_squares[PieceType::Bishop] = bishop_attacks(their_king, self.occupancies());
-        self.state.checking_squares[PieceType::Rook] = rook_attacks(their_king, self.occupancies());
-        self.state.checking_squares[PieceType::Queen] =
-            self.checking_squares(PieceType::Bishop) | self.checking_squares(PieceType::Rook);
     }
 
     pub fn update_hash_keys(&mut self) {
         self.state.key = 0;
         self.state.pawn_key = 0;
-        self.state.minor_key = 0;
         self.state.non_pawn_keys = [0; Color::NUM];
 
         for piece in 0..Piece::NUM {
