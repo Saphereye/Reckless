@@ -1253,7 +1253,15 @@ fn qsearch<NODE: NodeType>(td: &mut ThreadData, mut alpha: i32, beta: i32, ply: 
         }
 
         make_move(td, ply, mv);
-        let score = -qsearch::<NODE>(td, -beta, -alpha, ply + 1);
+
+        let score = if mv.is_quiet() {
+            let verify_score = -qsearch::<NonPV>(td, -alpha - 1, -alpha, ply + 1);
+
+            if NODE::PV && verify_score > alpha { -qsearch::<NODE>(td, -beta, -alpha, ply + 1) } else { verify_score }
+        } else {
+            -qsearch::<NODE>(td, -beta, -alpha, ply + 1)
+        };
+
         undo_move(td, mv);
 
         if td.shared.status.get() == Status::STOPPED {
