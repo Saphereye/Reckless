@@ -1242,7 +1242,7 @@ fn qsearch<NODE: NodeType>(td: &mut ThreadData, mut alpha: i32, beta: i32, ply: 
 
         if !is_loss(best_score) {
             // Late Move Pruning (LMP)
-            if move_count >= 3 && !td.board.is_direct_check(mv) {
+            if move_count >= 3 && tt_bound != Bound::Lower && !td.board.is_direct_check(mv) {
                 break;
             }
 
