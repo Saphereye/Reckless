@@ -231,8 +231,9 @@ pub fn start(td: &mut ThreadData, report: Report, thread_count: usize) {
             let score_trend = (0.8 + 0.05 * (td.previous_best_score - td.root_moves[0].score) as f32).clamp(0.80, 1.45);
 
             let best_move_stability = 1.0 + best_move_changes as f32 / 4.0;
+            let surprise_scale = td.shared.surprise_time.load(Ordering::Acquire) as f32 / 1000.0;
 
-            nodes_factor * pv_stability * eval_stability * score_trend * best_move_stability
+            nodes_factor * pv_stability * eval_stability * score_trend * best_move_stability * surprise_scale
         };
 
         if td.time_manager.soft_limit(td, multiplier) {
