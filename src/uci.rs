@@ -24,6 +24,7 @@ struct Settings {
     multi_pv: usize,
     move_overhead: u64,
     report: Report,
+    surprise_time: u32,
     surprise_prediction: Option<(u64, Move)>,
 }
 
@@ -34,6 +35,7 @@ impl Default for Settings {
             multi_pv: 1,
             move_overhead: 100,
             report: Report::Full,
+            surprise_time: 1000,
             surprise_prediction: None,
         }
     }
@@ -70,7 +72,7 @@ pub fn message_loop(mut buffer: VecDeque<String>) {
             ["isready"] => println!("readyok"),
 
             ["go", tokens @ ..] => go(&mut threads, &mut settings, &shared, tokens),
-            ["position", tokens @ ..] => position(&mut threads, &mut settings, &shared, tokens),
+            ["position", tokens @ ..] => position(&mut threads, &mut settings, tokens),
             ["setoption", tokens @ ..] => set_option(&mut threads, &mut settings, &shared, tokens),
             ["ucinewgame"] => reset(&mut threads, &shared),
 
@@ -187,6 +189,7 @@ fn reset(threads: &mut ThreadPool, shared: &Arc<SharedContext>) {
 fn go(threads: &mut ThreadPool, settings: &mut Settings, shared: &Arc<SharedContext>, tokens: &[&str]) {
     let board = &threads.main_thread().board;
     let limits = parse_limits(board.side_to_move(), tokens);
+    shared.surprise_time.store(settings.surprise_time, std::sync::atomic::Ordering::Release);
     let time_manager = TimeManager::new(limits, board.fullmove_number(), settings.move_overhead);
 
     threads.main_thread().multi_pv = settings.multi_pv;
@@ -253,9 +256,9 @@ fn go(threads: &mut ThreadPool, settings: &mut Settings, shared: &Arc<SharedCont
     crate::misc::dbg_print();
 }
 
-fn position(threads: &mut ThreadPool, settings: &mut Settings, shared: &Arc<SharedContext>, mut tokens: &[&str]) {
+fn position(threads: &mut ThreadPool, settings: &mut Settings, mut tokens: &[&str]) {
     let mut board = threads.main_thread().board.clone();
-    shared.surprise_time.store(1000, std::sync::atomic::Ordering::Release);
+    settings.surprise_time = 1000;
 
     while !tokens.is_empty() {
         match tokens {
@@ -273,16 +276,21 @@ fn position(threads: &mut ThreadPool, settings: &mut Settings, shared: &Arc<Shar
             }
             ["moves", rest @ ..] => {
                 for uci_move in rest {
+                    let played = board
+                        .generate_all_moves()
+                        .iter()
+                        .map(|entry| entry.mv)
+                        .find(|mv| mv.to_uci(&board) == *uci_move);
+
                     if let Some((board_hash, best_reply)) = settings.surprise_prediction.as_ref()
                         && board.hash() == *board_hash
-                        && let Some(mv) = make_uci_move(&mut board, uci_move)
+                        && let Some(mv) = played
                     {
-                        let surprise = if mv == *best_reply { 1000 } else { 1100 };
-                        shared.surprise_time.store(surprise, std::sync::atomic::Ordering::Release);
+                        settings.surprise_time = if mv == *best_reply { 1000 } else { 1100 };
                         settings.surprise_prediction = None;
-                    } else {
-                        make_uci_move(&mut board, uci_move);
                     }
+
+                    make_uci_move(&mut board, uci_move);
                 }
                 break;
             }
@@ -295,15 +303,12 @@ fn position(threads: &mut ThreadPool, settings: &mut Settings, shared: &Arc<Shar
     }
 }
 
-fn make_uci_move(board: &mut Board, uci_move: &str) -> Option<Move> {
+fn make_uci_move(board: &mut Board, uci_move: &str) {
     let moves = board.generate_all_moves();
     if let Some(mv) = moves.iter().map(|entry| entry.mv).find(|mv| mv.to_uci(board) == uci_move) {
         board.make_move(mv, &mut NullBoardObserver);
         board.advance_fullmove_counter();
-        return Some(mv);
     }
-
-    None
 }
 
 fn set_option(threads: &mut ThreadPool, settings: &mut Settings, shared: &Arc<SharedContext>, tokens: &[&str]) {
@@ -460,9 +465,9 @@ mod tests {
     fn test_position_helper(tokens: &[&str]) -> Board {
         let shared = Arc::new(SharedContext::default());
         let mut settings = Settings::default();
-        let mut threads = ThreadPool::new(shared.clone());
+        let mut threads = ThreadPool::new(shared);
 
-        position(&mut threads, &mut settings, &shared, tokens);
+        position(&mut threads, &mut settings, tokens);
         threads.main_thread().board.clone()
     }
 
