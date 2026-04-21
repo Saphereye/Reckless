@@ -226,8 +226,8 @@ impl Network {
                 forward::activate_ft(&self.pst_stack[self.index], &self.threat_stack[self.index], board.side_to_move());
             let (nnz_indexes, nnz_count) = forward::find_nnz(&ft_out, &self.nnz_table);
 
-            let l1_out = forward::propagate_l1(ft_out, &nnz_indexes[..nnz_count], bucket);
-            let l2_out = forward::propagate_l2(l1_out, bucket);
+            let (l1_out, l1_nnz, l1_nnz_count) = forward::propagate_l1(ft_out, &nnz_indexes[..nnz_count], bucket);
+            let l2_out = forward::propagate_l2(l1_out, &l1_nnz, l1_nnz_count, bucket);
             let l3_out = forward::propagate_l3(l2_out, bucket);
 
             (l3_out * NETWORK_SCALE as f32) as i32
@@ -242,8 +242,8 @@ impl Network {
             let ft_out =
                 forward::activate_ft(&self.pst_stack[self.index], &self.threat_stack[self.index], board.side_to_move());
             let (nnz_indexes, nnz_count) = forward::find_nnz(&ft_out, &self.nnz_table);
-            let l1_out = forward::propagate_l1(ft_out, &nnz_indexes[..nnz_count], bucket);
-            let l2_out = forward::propagate_l2(l1_out, bucket);
+            let (l1_out, l1_nnz, l1_nnz_count) = forward::propagate_l1(ft_out, &nnz_indexes[..nnz_count], bucket);
+            let l2_out = forward::propagate_l2(l1_out, &l1_nnz, l1_nnz_count, bucket);
             let l3_out = forward::propagate_l3(l2_out, bucket);
             (l3_out * NETWORK_SCALE as f32) as i32
         }
