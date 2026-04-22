@@ -360,7 +360,7 @@ fn search<NODE: NodeType>(
                 let cont_bonus = (114 * depth - 57).min(1284);
 
                 td.quiet_history.update(td.board.all_threats(), stm, tt_move, quiet_bonus);
-                update_continuation_histories(td, ply, td.board.moved_piece(tt_move), tt_move.to(), cont_bonus);
+                update_continuation_histories(td, ply, td.board.moved_piece(tt_move), tt_move.capture_sq(&td.board), cont_bonus);
             }
 
             if td.board.halfmove_clock() < 90 {
@@ -554,7 +554,7 @@ fn search<NODE: NodeType>(
         && !is_loss(beta)
         && !(tt_bound == Bound::Lower
             && tt_move.is_capture()
-            && td.board.piece_on(tt_move.to()).value() >= PieceType::Knight.value())
+            && td.board.type_on(tt_move.capture_sq(&td.board)).value() >= PieceType::Knight.value())
     {
         debug_assert_ne!(td.stack[ply - 1].mv, Move::NULL);
 
@@ -725,7 +725,7 @@ fn search<NODE: NodeType>(
         let history = if is_quiet {
             td.quiet_history.get(td.board.all_threats(), stm, mv) + td.conthist(ply, 1, mv) + td.conthist(ply, 2, mv)
         } else {
-            let captured = td.board.type_on(mv.capture_sq());
+            let captured = td.board.type_on(mv.capture_sq(&td.board));
             td.noisy_history.get(td.board.all_threats(), td.board.moved_piece(mv), mv.to(), captured)
         };
 
@@ -1029,32 +1029,32 @@ fn search<NODE: NodeType>(
                 td.board.all_threats(),
                 td.board.moved_piece(best_move),
                 best_move.to(),
-                td.board.type_on(best_move.capture_sq()),
+                td.board.type_on(best_move.capture_sq(&td.board)),
                 noisy_bonus,
             );
         } else {
             td.quiet_history.update(td.board.all_threats(), stm, best_move, quiet_bonus);
-            update_continuation_histories(td, ply, td.board.moved_piece(best_move), best_move.to(), cont_bonus);
+            update_continuation_histories(td, ply, td.board.moved_piece(best_move), best_move.capture_sq(&td.board), cont_bonus);
 
             for &mv in quiet_moves.iter() {
                 td.quiet_history.update(td.board.all_threats(), stm, mv, -quiet_malus);
-                update_continuation_histories(td, ply, td.board.moved_piece(mv), mv.to(), -cont_malus);
+                update_continuation_histories(td, ply, td.board.moved_piece(mv), mv.capture_sq(&td.board), -cont_malus);
             }
         }
 
         for &mv in noisy_moves.iter() {
-            let captured = td.board.type_on(mv.capture_sq());
+            let captured = td.board.type_on(mv.capture_sq(&td.board));
             td.noisy_history.update(td.board.all_threats(), td.board.moved_piece(mv), mv.to(), captured, -noisy_malus);
         }
 
         if !NODE::ROOT && td.stack[ply - 1].mv.is_quiet() && td.stack[ply - 1].move_count < 2 {
             let malus = (90 * depth - 58).min(789);
-            update_continuation_histories(td, ply - 1, td.stack[ply - 1].piece, td.stack[ply - 1].mv.to(), -malus);
+            update_continuation_histories(td, ply - 1, td.stack[ply - 1].piece, td.stack[ply - 1].mv.capture_sq(&td.board), -malus);
         }
 
         if current_search_count > 1 && best_move.is_quiet() && best_score >= beta {
             let bonus = (194 * depth - 89).min(1595);
-            update_continuation_histories(td, ply, td.stack[ply].piece, best_move.to(), bonus);
+            update_continuation_histories(td, ply, td.stack[ply].piece, best_move.capture_sq(&td.board), bonus);
         }
     }
 
@@ -1292,7 +1292,7 @@ fn qsearch<NODE: NodeType>(td: &mut ThreadData, mut alpha: i32, beta: i32, ply: 
                 td.board.all_threats(),
                 td.board.moved_piece(best_move),
                 best_move.to(),
-                td.board.type_on(best_move.capture_sq()),
+                td.board.type_on(best_move.capture_sq(&td.board)),
                 bonus,
             );
         } else {

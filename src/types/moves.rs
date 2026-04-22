@@ -98,8 +98,14 @@ impl Move {
         matches!(self.kind(), MoveKind::EnPassant)
     }
 
-    pub fn capture_sq(self) -> Square {
-        self.to() ^ (self.is_en_passant() as u8 * 8)
+    pub fn capture_sq(self, board: &Board) -> Square {
+        if self.is_en_passant() {
+            self.to() ^ 8
+        } else if self.is_castling() {
+            board.get_castling_rook(self.to()).0
+        } else {
+            self.to()
+        }
     }
 
     pub const fn is_castling(self) -> bool {

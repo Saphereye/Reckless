@@ -158,7 +158,7 @@ impl MovePicker {
 
         for entry in self.list.iter_mut() {
             let mv = entry.mv;
-            let captured = td.board.type_on(mv.capture_sq());
+            let captured = td.board.type_on(mv.capture_sq(&td.board));
             let pt = td.board.type_on(mv.from());
 
             entry.score = 16 * captured.value()
