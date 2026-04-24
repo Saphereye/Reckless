@@ -505,7 +505,7 @@ fn search<NODE: NodeType>(
 
     let improving = improvement > 0;
 
-    if !td.stack[ply].follow_pv && !tt_pv && !excluded && depth >= 6 && tt_move.is_null() {
+    if !td.stack[ply].follow_pv && !tt_pv && !excluded && depth >= 14 && tt_move.is_null() {
         depth -= 1;
     }
 
