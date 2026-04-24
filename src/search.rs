@@ -170,6 +170,8 @@ pub fn start(td: &mut ThreadData, report: Report, thread_count: usize) {
 
         if td.shared.status.get() != Status::STOPPED {
             td.completed_depth = depth;
+            td.last_iteration_pv =
+                std::iter::once(td.root_moves[0].mv).chain(td.root_moves[0].pv.line().iter().copied()).collect();
         }
 
         if report == Report::Full
@@ -287,6 +289,11 @@ fn search<NODE: NodeType>(
     if NODE::PV {
         td.sel_depth = td.sel_depth.max(ply as i32);
     }
+
+    td.stack[ply].follow_pv = NODE::ROOT
+        || (ply > 0
+            && td.stack[ply - 1].follow_pv
+            && td.last_iteration_pv.get((ply - 1) as usize).copied() == Some(td.stack[ply - 1].mv));
 
     if td.id == 0 && td.time_manager.check_time(td) {
         td.shared.status.set(Status::STOPPED);
@@ -497,6 +504,10 @@ fn search<NODE: NodeType>(
     };
 
     let improving = improvement > 0;
+
+    if !td.stack[ply].follow_pv && !tt_pv && !excluded && depth >= 8 && tt_move.is_null() {
+        depth -= 1;
+    }
 
     // Razoring
     if !NODE::PV

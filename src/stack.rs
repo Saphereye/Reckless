@@ -45,6 +45,7 @@ pub struct StackEntry {
     pub reduction: i32,
     pub conthist: *mut [[i16; 64]; 13],
     pub contcorrhist: *mut [[i16; 64]; 13],
+    pub follow_pv: bool,
 }
 
 unsafe impl Send for StackEntry {}
@@ -63,6 +64,7 @@ impl Default for StackEntry {
             reduction: 0,
             conthist: std::ptr::null_mut(),
             contcorrhist: std::ptr::null_mut(),
+            follow_pv: false,
         }
     }
 }

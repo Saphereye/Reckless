@@ -158,6 +158,7 @@ pub struct ThreadData {
     pub pv_index: usize,
     pub pv_start: usize,
     pub pv_end: usize,
+    pub last_iteration_pv: Vec<Move>,
 }
 
 impl ThreadData {
@@ -191,6 +192,7 @@ impl ThreadData {
             pv_index: 0,
             pv_start: 0,
             pv_end: 0,
+            last_iteration_pv: Vec::new(),
         }
     }
 
