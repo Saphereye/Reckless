@@ -10,7 +10,7 @@ pub struct MoveEntry {
 }
 
 pub struct MoveList {
-    inner: ArrayVec<MoveEntry, MAX_MOVES>,
+    pub inner: ArrayVec<MoveEntry, MAX_MOVES>,
 }
 
 impl MoveList {

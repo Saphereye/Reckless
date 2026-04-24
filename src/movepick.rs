@@ -140,10 +140,59 @@ impl MovePicker {
         None
     }
 
+    #[cfg(target_feature = "avx512f")]
+    fn get_best_entry(&mut self) -> MoveEntry {
+        use std::arch::x86_64::*;
+        unsafe {
+            let n = self.list.len();
+            let base = (self.list.inner.data.as_ptr() as *const i32).add(1);
+            let indices = _mm512_setr_epi32(0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15);
+            let mut max_vec = _mm512_set1_epi32(i32::MIN);
+            let mut i = 0;
+
+            while i + 16 <= n {
+                let shifted = _mm512_add_epi32(indices, _mm512_set1_epi32(i as i32));
+                let chunk = _mm512_i32gather_epi32(shifted, base, 8);
+                max_vec = _mm512_max_epi32(max_vec, chunk);
+                i += 16;
+            }
+
+            if i < n {
+                let mask = (1u16 << (n - i)) - 1;
+                let shifted = _mm512_add_epi32(indices, _mm512_set1_epi32(i as i32));
+                let chunk = _mm512_mask_i32gather_epi32(_mm512_set1_epi32(i32::MIN), mask, shifted, base, 8);
+                max_vec = _mm512_max_epi32(max_vec, chunk);
+            }
+
+            let max_val = _mm512_reduce_max_epi32(max_vec);
+            let target = _mm512_set1_epi32(max_val);
+
+            i = 0;
+            let mut best_index = 0;
+            while i + 16 <= n {
+                let shifted = _mm512_add_epi32(indices, _mm512_set1_epi32(i as i32));
+                let chunk = _mm512_i32gather_epi32(shifted, base, 8);
+                let mask = _mm512_cmpeq_epi32_mask(chunk, target);
+                if mask != 0 {
+                    best_index = i + (15 - mask.leading_zeros() as usize);
+                }
+                i += 16;
+            }
+
+            for j in i..n {
+                if self.list[j].score == max_val {
+                    best_index = j;
+                }
+            }
+
+            self.list.remove(best_index)
+        }
+    }
+
+    #[cfg(not(target_feature = "avx512f"))]
     fn get_best_entry(&mut self) -> MoveEntry {
         let mut best_index = 0;
         let mut best_score = i32::MIN;
-
         for (index, entry) in self.list.iter().enumerate() {
             if entry.score >= best_score {
                 best_index = index;

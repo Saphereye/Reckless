@@ -4,7 +4,7 @@ use crate::types::MoveEntry;
 
 #[derive(Clone)]
 pub struct ArrayVec<T: Copy, const N: usize> {
-    data: [MaybeUninit<T>; N],
+    pub data: [MaybeUninit<T>; N],
     len: usize,
 }
 
