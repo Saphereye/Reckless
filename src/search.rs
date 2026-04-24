@@ -497,6 +497,7 @@ fn search<NODE: NodeType>(
     };
 
     let improving = improvement > 0;
+    let opponent_worsening = !in_check && is_valid(td.stack[ply - 1].eval) && eval > -td.stack[ply - 1].eval;
 
     // Razoring
     if !NODE::PV
@@ -515,7 +516,7 @@ fn search<NODE: NodeType>(
         && !excluded
         && estimated_score
             >= beta
-                + (1165 * depth * depth / 128 - (80 * improving as i32)
+                + (1165 * depth * depth / 128 - 80 * improving as i32 - 60 * opponent_worsening as i32
                     + 25 * depth
                     + 560 * correction_value.abs() / 1024
                     - 59 * (td.board.all_threats() & td.board.colors(stm)).is_empty() as i32
