@@ -345,7 +345,8 @@ fn search<NODE: NodeType>(
                 _ => true,
             }
         {
-            if tt_move.is_quiet() && tt_score >= beta && td.stack[ply - 1].move_count < 4 {
+            if tt_move.is_quiet() && tt_score >= beta && td.stack[ply - 1].move_count < 4 && td.board.is_legal(tt_move)
+            {
                 let quiet_bonus = (175 * depth - 79).min(1637);
                 let cont_bonus = (114 * depth - 57).min(1284);
 
