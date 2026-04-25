@@ -1,5 +1,6 @@
 use crate::{
     lookup::{bishop_attacks, king_attacks, knight_attacks, rook_attacks},
+    misc::{dbg_hit, dbg_stats},
     search::NodeType,
     setwise::pawn_attacks_setwise,
     thread::ThreadData,
@@ -262,7 +263,21 @@ impl MovePicker {
                         PieceType::Rook => 5000 * offense_rook.contains(to) as i32,
                         _ => {
                             let v = offense_value[pt as usize][to as usize];
-                            if v > 0 { v * 8000 / PieceType::Queen.value() } else { 0 }
+                            // dbg_hit(v > 0, 4); // offense fires
+                            // dbg_hit(v == 0, 5); // offense doesn't fire
+                            if v > 0 {
+                                // dbg_hit(v == PieceType::Knight.value(), 0); // knight target
+                                // dbg_hit(v == PieceType::Bishop.value(), 1); // bishop target
+                                // dbg_hit(v == PieceType::Rook.value(), 2); // rook target
+                                // dbg_hit(v == PieceType::Queen.value(), 3); // queen target
+                                // dbg_stats(v, 0);
+                                // dbg_stats(v * 5000 / PieceType::Bishop.value(), 1);
+
+                                v * 5000 / PieceType::Bishop.value()
+                            } else {
+                                // dbg_hit(true, 8); // how often we miss entirely
+                                0
+                            }
                         }
                     }
                 }
