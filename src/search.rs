@@ -713,7 +713,10 @@ fn search<NODE: NodeType>(
         let is_quiet = mv.is_quiet();
 
         let history = if is_quiet {
-            td.quiet_history.get(td.board.all_threats(), stm, mv) + td.conthist(ply, 1, mv) + td.conthist(ply, 2, mv)
+            td.quiet_history.get(td.board.all_threats(), stm, mv)
+                + td.conthist(ply, 1, mv)
+                + td.conthist(ply, 2, mv)
+                + td.pawn_history.get(td.board.pawn_key(), td.board.moved_piece(mv), mv.to())
         } else {
             let captured = td.board.type_on(mv.to());
             td.noisy_history.get(td.board.all_threats(), td.board.moved_piece(mv), mv.to(), captured)
@@ -1028,10 +1031,12 @@ fn search<NODE: NodeType>(
             );
         } else {
             td.quiet_history.update(td.board.all_threats(), stm, best_move, quiet_bonus);
+            td.pawn_history.update(td.board.pawn_key(), td.board.moved_piece(best_move), best_move.to(), quiet_bonus);
             update_continuation_histories(td, ply, td.board.moved_piece(best_move), best_move.to(), cont_bonus);
 
             for &mv in quiet_moves.iter() {
                 td.quiet_history.update(td.board.all_threats(), stm, mv, -quiet_malus);
+                td.pawn_history.update(td.board.pawn_key(), td.board.moved_piece(mv), mv.to(), -quiet_malus);
                 update_continuation_histories(td, ply, td.board.moved_piece(mv), mv.to(), -cont_malus);
             }
         }

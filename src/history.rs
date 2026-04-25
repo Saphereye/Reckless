@@ -222,3 +222,29 @@ fn zeroed_box<T>() -> Box<T> {
         Box::<T>::from_raw(ptr.cast())
     }
 }
+
+pub struct PawnHistory {
+    // [pawn_key & MASK][piece][to]
+    entries: Box<[PieceToHistory<i16>; 512]>,
+}
+
+impl PawnHistory {
+    const SIZE: usize = 512;
+    const MASK: usize = Self::SIZE - 1;
+    const MAX: i32 = 8192;
+
+    pub fn get(&self, pawn_key: u64, piece: Piece, sq: Square) -> i32 {
+        self.entries[pawn_key as usize & Self::MASK][piece][sq] as i32
+    }
+
+    pub fn update(&mut self, pawn_key: u64, piece: Piece, sq: Square, bonus: i32) {
+        let entry = &mut self.entries[pawn_key as usize & Self::MASK][piece][sq];
+        apply_bonus::<{ Self::MAX }>(entry, bonus);
+    }
+}
+
+impl Default for PawnHistory {
+    fn default() -> Self {
+        Self { entries: zeroed_box() }
+    }
+}
