@@ -262,13 +262,7 @@ impl MovePicker {
                         PieceType::Rook => 5000 * offense_rook.contains(to) as i32,
                         _ => {
                             let v = offense_value[pt as usize][to as usize];
-                            if v > 0 {
-                                // scale: queen value maps to ~8000, rook to ~5000, bishop/knight to ~3000
-                                // adjust the multiplier based on your piece value scale
-                                v * 8000 / PieceType::Queen.value()
-                            } else {
-                                0
-                            }
+                            if v > 0 { v * 8000 / PieceType::Queen.value() } else { 0 }
                         }
                     }
                 }
