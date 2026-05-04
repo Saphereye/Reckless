@@ -1042,7 +1042,7 @@ fn search<NODE: NodeType>(
             update_continuation_histories(td, ply - 1, td.stack[ply - 1].piece, td.stack[ply - 1].mv.to(), -malus);
         }
 
-        if current_search_count > 1 && best_move.is_quiet() && best_score >= beta {
+        if current_search_count > 1 && best_move.is_quiet() && best_score >= beta && cut_node {
             let bonus = (194 * depth - 89).min(1595);
             update_continuation_histories(td, ply, td.stack[ply].piece, best_move.to(), bonus);
         }
