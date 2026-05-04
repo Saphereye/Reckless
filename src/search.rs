@@ -585,7 +585,7 @@ fn search<NODE: NodeType>(
     // ProbCut
     let mut probcut_beta = beta + 270 - 75 * improving as i32;
 
-    if cut_node
+    if !NODE::PV
         && !is_win(beta)
         && if is_valid(tt_score) { tt_score >= probcut_beta && !is_decisive(tt_score) } else { eval >= beta }
         && !tt_move.is_quiet()
