@@ -61,17 +61,25 @@ pub unsafe fn propagate_l1(
 
     let packed = std::slice::from_raw_parts(ft_out.as_ptr().cast::<i32>(), L1_SIZE / CHUNKS);
 
-    let mut pairs = nnz.chunks_exact(2);
-
-    for pair in &mut pairs {
-        let index1 = *pair.get_unchecked(0) as usize;
-        let index2 = *pair.get_unchecked(1) as usize;
+    let mut i = 0;
+    while i + 1 < nnz.len() {
+        let index1 = *nnz.get_unchecked(i) as usize;
+        let index2 = *nnz.get_unchecked(i + 1) as usize;
 
         let input1 = simd::splat_i32(*packed.get_unchecked(index1));
         let input2 = simd::splat_i32(*packed.get_unchecked(index2));
 
         let weights1 = parameters.l1_weights[bucket].as_ptr().add(index1 * L2_SIZE * CHUNKS);
         let weights2 = parameters.l1_weights[bucket].as_ptr().add(index2 * L2_SIZE * CHUNKS);
+
+        if i + 3 < nnz.len() {
+            let next_idx1 = *nnz.get_unchecked(i + 2) as usize;
+            let next_idx2 = *nnz.get_unchecked(i + 3) as usize;
+            let next_weights1 = parameters.l1_weights[bucket].as_ptr().add(next_idx1 * L2_SIZE * CHUNKS);
+            let next_weights2 = parameters.l1_weights[bucket].as_ptr().add(next_idx2 * L2_SIZE * CHUNKS);
+            std::arch::x86_64::_mm_prefetch(next_weights1.cast(), std::arch::x86_64::_MM_HINT_T0);
+            std::arch::x86_64::_mm_prefetch(next_weights2.cast(), std::arch::x86_64::_MM_HINT_T0);
+        }
 
         for j in (0..L2_SIZE).step_by(simd::F32_LANES) {
             let weights1 = *weights1.add(j * CHUNKS).cast();
@@ -80,10 +88,12 @@ pub unsafe fn propagate_l1(
             let vector = &mut pre_activations[j / simd::F32_LANES];
             *vector = simd::double_dpbusd(*vector, input1, weights1, input2, weights2);
         }
+
+        i += 2;
     }
 
-    if let Some(last) = pairs.remainder().first() {
-        let index = *last as usize;
+    if i < nnz.len() {
+        let index = *nnz.get_unchecked(i) as usize;
         let input = simd::splat_i32(*packed.get_unchecked(index));
         let weights = parameters.l1_weights[bucket].as_ptr().add(index * L2_SIZE * CHUNKS);
 
