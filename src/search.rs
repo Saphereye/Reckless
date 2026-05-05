@@ -81,6 +81,11 @@ pub fn start(td: &mut ThreadData, report: Report, thread_count: usize) {
         td.root_depth = depth;
         td.best_move_changes = 0;
 
+        if depth > 1 {
+            td.quiet_history.decay(depth);
+            td.noisy_history.decay(depth);
+        }
+
         td.pv_start = 0;
         td.pv_end = 0;
 

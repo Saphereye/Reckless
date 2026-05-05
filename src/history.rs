@@ -57,6 +57,27 @@ impl QuietHistory {
         entry.update_factorizer(bonus);
         entry.update_bucket(threats, mv, bonus);
     }
+
+    pub fn decay(&mut self, depth: i32) {
+        let divisor = match depth {
+            1..=10 => 4,
+            11..=20 => 3,
+            _ => 2,
+        };
+
+        for color in 0..2 {
+            for from in 0..64 {
+                for to in 0..64 {
+                    self.entries[color][from][to].factorizer /= divisor;
+                    for i in 0..2 {
+                        for j in 0..2 {
+                            self.entries[color][from][to].buckets[i][j] /= divisor;
+                        }
+                    }
+                }
+            }
+        }
+    }
 }
 
 impl Default for QuietHistory {
@@ -107,6 +128,25 @@ impl NoisyHistory {
 
         entry.update_factorizer(bonus);
         entry.update_bucket(threats, sq, captured, bonus);
+    }
+
+    pub fn decay(&mut self, depth: i32) {
+        let divisor = match depth {
+            1..=10 => 4,
+            11..=20 => 3,
+            _ => 2,
+        };
+
+        for piece in 0..13 {
+            for sq in 0..64 {
+                self.entries[piece][sq].factorizer /= divisor;
+                for captured in 0..7 {
+                    for threatened in 0..2 {
+                        self.entries[piece][sq].buckets[captured][threatened] /= divisor;
+                    }
+                }
+            }
+        }
     }
 }
 
