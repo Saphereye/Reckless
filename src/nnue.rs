@@ -306,6 +306,17 @@ impl Network {
 
         Some(baseline - without)
     }
+
+    pub fn get_features(&self, board: &Board) -> [f32; 768] {
+        unsafe {
+            let ft_out = forward::activate_ft(&self.pst_stack[self.index], &self.threat_stack[self.index], board.side_to_move());
+            let mut features = [0.0f32; 768];
+            for i in 0..768 {
+                features[i] = (ft_out.data[i] as f32) / 255.0;
+            }
+            features
+        }
+    }
 }
 
 impl BoardObserver for Network {

@@ -1,5 +1,6 @@
 use crate::{
     lookup::king_attacks,
+    policy,
     search::NodeType,
     setwise::{bishop_attacks_setwise, knight_attacks_setwise, pawn_attacks_setwise, rook_attacks_setwise},
     thread::ThreadData,
@@ -22,6 +23,8 @@ pub struct MovePicker {
     stage: Stage,
     bad_noisy: ArrayVec<Move, MAX_MOVES>,
     bad_noisy_idx: usize,
+    cached_features: Option<[f32; 768]>,
+    cached_logits: Option<[f32; 4096]>,
 }
 
 impl MovePicker {
@@ -33,6 +36,8 @@ impl MovePicker {
             stage: if tt_move.is_present() { Stage::HashMove } else { Stage::GenerateNoisy },
             bad_noisy: ArrayVec::new(),
             bad_noisy_idx: 0,
+            cached_features: None,
+            cached_logits: None,
         }
     }
 
@@ -44,6 +49,8 @@ impl MovePicker {
             stage: Stage::GenerateNoisy,
             bad_noisy: ArrayVec::new(),
             bad_noisy_idx: 0,
+            cached_features: None,
+            cached_logits: None,
         }
     }
 
@@ -55,6 +62,8 @@ impl MovePicker {
             stage: Stage::GenerateNoisy,
             bad_noisy: ArrayVec::new(),
             bad_noisy_idx: 0,
+            cached_features: None,
+            cached_logits: None,
         }
     }
 
@@ -74,7 +83,7 @@ impl MovePicker {
         if self.stage == Stage::GenerateNoisy {
             self.stage = Stage::GoodNoisy;
             td.board.append_noisy_moves(&mut self.list);
-            self.score_noisy(td);
+            self.score_noisy(td, ply);
         }
 
         if self.stage == Stage::GoodNoisy {
@@ -91,7 +100,7 @@ impl MovePicker {
                 }
 
                 if NODE::ROOT {
-                    self.score_noisy(td);
+                    self.score_noisy(td, ply);
                 }
 
                 return Some(entry.mv);
@@ -150,6 +159,17 @@ impl MovePicker {
 
     fn score_noisy(&mut self, td: &ThreadData) {
         let threats = td.board.all_threats();
+        
+        // Only use policy in main search, not in qsearch/probcut
+        let use_policy = self.threshold.is_none();
+        let logits = if use_policy {
+            Some(self.cached_logits.get_or_insert_with(|| {
+                let features = self.cached_features.get_or_insert_with(|| td.nnue.get_features(&td.board));
+                policy::score_moves(features)
+            }))
+        } else {
+            None
+        };
 
         for entry in self.list.iter_mut() {
             let mv = entry.mv;
@@ -160,6 +180,11 @@ impl MovePicker {
                 + td.noisy_history.get(threats, td.board.moved_piece(mv), mv.to(), captured)
                 + 4000 * (mv.is_promotion() && mv.promo_piece_type() == PieceType::Queen) as i32
                 + (200000 - 20000 * pt as i32) * td.board.in_check() as i32;
+
+            if let Some(ref logits) = logits {
+                let policy_score = logits[mv.move_index()];
+                entry.score = ((entry.score as f32) + 1.0 * policy_score) as i32;
+            }
         }
     }
 
@@ -168,6 +193,17 @@ impl MovePicker {
         let side = td.board.side_to_move();
         let occupancies = td.board.occupancies();
         let pawn_threats = td.board.piece_threats(PieceType::Pawn);
+        
+        // Only use policy in main search, not in qsearch/probcut
+        let use_policy = self.threshold.is_none();
+        let logits = if use_policy {
+            Some(self.cached_logits.get_or_insert_with(|| {
+                let features = self.cached_features.get_or_insert_with(|| td.nnue.get_features(&td.board));
+                policy::score_moves(features)
+            }))
+        } else {
+            None
+        };
 
         let threatened = {
             let minor_threats =
@@ -220,6 +256,11 @@ impl MovePicker {
                 - 7584 * threatened[pt].contains(mv.to()) as i32
                 + 5000 * offense[pt].contains(mv.to()) as i32
                 - 4000 * wall_pawns.contains(mv.from()) as i32;
+
+            if let Some(ref logits) = logits {
+                let policy_score = logits[mv.move_index()];
+                entry.score = ((entry.score as f32) + 1.0 * policy_score) as i32;
+            }
         }
     }
 }

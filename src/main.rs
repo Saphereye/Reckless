@@ -12,6 +12,7 @@ mod movepick;
 mod nnue;
 mod numa;
 mod parameters;
+mod policy;
 mod search;
 mod setwise;
 mod stack;
@@ -33,6 +34,7 @@ mod bindings;
 fn main() {
     lookup::initialize();
     nnue::initialize();
+    policy::initialize();
 
     let buffer: std::collections::VecDeque<String> = std::env::args().skip(1).collect();
 
