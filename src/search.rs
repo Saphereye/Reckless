@@ -526,10 +526,13 @@ fn search<NODE: NodeType>(
     }
 
     // Null Move Pruning (NMP)
+    let tt_near_beta = tt_bound == Bound::Lower && (tt_score - beta).abs() < 50 && tt_depth >= depth - 1;
+    
     if cut_node
         && !in_check
         && !excluded
         && !potential_singularity
+        && !tt_near_beta
         && estimated_score
             >= beta
                 + (-8 * depth + 116 * tt_pv as i32
