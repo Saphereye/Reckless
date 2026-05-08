@@ -121,7 +121,7 @@ pub fn start(td: &mut ThreadData, report: Report, thread_count: usize) {
                 td.root_delta = beta - alpha;
 
                 // Root Search
-                let score = search::<Root>(td, alpha, beta, (depth - reduction).max(1), false, 0);
+                let score = search::<Root>(td, alpha, beta, (depth - reduction).max(1), false, 0, false);
 
                 td.root_moves[td.pv_index..td.pv_end].sort_by_key(|rm| std::cmp::Reverse(rm.score));
 
@@ -254,7 +254,7 @@ pub fn start(td: &mut ThreadData, report: Report, thread_count: usize) {
 }
 
 fn search<NODE: NodeType>(
-    td: &mut ThreadData, mut alpha: i32, mut beta: i32, depth: i32, cut_node: bool, ply: isize,
+    td: &mut ThreadData, mut alpha: i32, mut beta: i32, depth: i32, cut_node: bool, ply: isize, is_probcut: bool,
 ) -> i32 {
     debug_assert!(ply as usize <= MAX_PLY);
     debug_assert!(-Score::INFINITE <= alpha && alpha < beta && beta <= Score::INFINITE);
@@ -556,7 +556,7 @@ fn search<NODE: NodeType>(
         td.board.make_null_move();
         td.shared.tt.prefetch(td.board.hash());
 
-        let score = -search::<NonPV>(td, -beta, -beta + 1, depth - r, false, ply + 1);
+        let score = -search::<NonPV>(td, -beta, -beta + 1, depth - r, false, ply + 1, false);
 
         td.board.undo_null_move();
 
@@ -570,7 +570,7 @@ fn search<NODE: NodeType>(
             }
 
             td.nmp_min_ply = ply as i32 + 3 * (depth - r) / 4;
-            let verified_score = search::<NonPV>(td, beta - 1, beta, depth - r, false, ply);
+            let verified_score = search::<NonPV>(td, beta - 1, beta, depth - r, false, ply, false);
             td.nmp_min_ply = 0;
 
             if td.shared.status.get() == Status::STOPPED {
@@ -612,11 +612,11 @@ fn search<NODE: NodeType>(
             if score >= probcut_beta && probcut_depth > 0 {
                 let adjusted_beta = (probcut_beta + 260 * (base_depth - probcut_depth)).min(Score::INFINITE);
 
-                score = -search::<NonPV>(td, -adjusted_beta, -adjusted_beta + 1, probcut_depth, false, ply + 1);
+                score = -search::<NonPV>(td, -adjusted_beta, -adjusted_beta + 1, probcut_depth, false, ply + 1, true);
 
                 if score < adjusted_beta && probcut_beta < adjusted_beta {
                     probcut_depth = base_depth;
-                    score = -search::<NonPV>(td, -probcut_beta, -probcut_beta + 1, probcut_depth, false, ply + 1);
+                    score = -search::<NonPV>(td, -probcut_beta, -probcut_beta + 1, probcut_depth, false, ply + 1, true);
                 } else {
                     probcut_beta = adjusted_beta;
                 }
@@ -653,7 +653,7 @@ fn search<NODE: NodeType>(
 
         td.stack[ply].excluded = tt_move;
         td.stack[ply].mv = Move::NULL;
-        singular_score = search::<NonPV>(td, singular_beta - 1, singular_beta, singular_depth, cut_node, ply);
+        singular_score = search::<NonPV>(td, singular_beta - 1, singular_beta, singular_depth, cut_node, ply, false);
         td.stack[ply].excluded = Move::NULL;
 
         if td.shared.status.get() == Status::STOPPED {
@@ -812,6 +812,7 @@ fn search<NODE: NodeType>(
             if !tt_pv && cut_node {
                 reduction += 1818;
                 reduction += 2118 * tt_move.is_null() as i32;
+                reduction += 512 * is_probcut as i32;
             }
 
             if !improving {
@@ -841,7 +842,7 @@ fn search<NODE: NodeType>(
                 (new_depth - reduction / 1024).clamp(1, new_depth + (move_count <= 3) as i32 + 1) + 2 * NODE::PV as i32;
 
             td.stack[ply].reduction = reduction;
-            score = -search::<NonPV>(td, -alpha - 1, -alpha, reduced_depth, true, ply + 1);
+            score = -search::<NonPV>(td, -alpha - 1, -alpha, reduced_depth, true, ply + 1, false);
             td.stack[ply].reduction = 0;
             current_search_count += 1;
 
@@ -852,7 +853,7 @@ fn search<NODE: NodeType>(
                 }
 
                 if new_depth > reduced_depth {
-                    score = -search::<NonPV>(td, -alpha - 1, -alpha, new_depth, !cut_node, ply + 1);
+                    score = -search::<NonPV>(td, -alpha - 1, -alpha, new_depth, !cut_node, ply + 1, false);
                     current_search_count += 1;
                 }
             }
@@ -907,7 +908,7 @@ fn search<NODE: NodeType>(
 
             let reduced_depth = new_depth - (reduction >= 2864) as i32 - (reduction >= 5585) as i32;
 
-            score = -search::<NonPV>(td, -alpha - 1, -alpha, reduced_depth, !cut_node, ply + 1);
+            score = -search::<NonPV>(td, -alpha - 1, -alpha, reduced_depth, !cut_node, ply + 1, false);
             current_search_count += 1;
         }
 
@@ -917,7 +918,7 @@ fn search<NODE: NodeType>(
                 new_depth = new_depth.max(1);
             }
 
-            score = -search::<PV>(td, -beta, -alpha, new_depth, false, ply + 1);
+            score = -search::<PV>(td, -beta, -alpha, new_depth, false, ply + 1, false);
             current_search_count += 1;
         }
 
