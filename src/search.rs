@@ -720,6 +720,11 @@ fn search<NODE: NodeType>(
         };
 
         if !NODE::ROOT && !is_loss(best_score) {
+            if !NODE::PV && depth <= 5 && !in_check && move_count >= 8 {
+                skip_quiets = true;
+                continue;
+            }
+
             // Late Move Pruning (LMP)
             if !in_check
                 && !td.board.is_direct_check(mv)
