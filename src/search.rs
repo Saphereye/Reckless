@@ -499,6 +499,7 @@ fn search<NODE: NodeType>(
     // Razoring
     if !NODE::PV
         && !in_check
+        && !tt_move.is_capture()
         && estimated_score < alpha - 295 - 261 * depth * depth
         && alpha < 2048
         && !tt_move.is_quiet()
