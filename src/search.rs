@@ -464,26 +464,6 @@ fn search<NODE: NodeType>(
         td.quiet_history.update(td.board.prior_threats(), !stm, td.stack[ply - 1].mv, bonus);
     }
 
-    // Hindsight reductions
-    if !NODE::ROOT && !in_check && !excluded && is_valid(td.stack[ply - 1].eval) {
-        let eval_delta = eval + td.stack[ply - 1].eval;
-        let reduction = td.stack[ply - 1].reduction;
-
-        if reduction >= 2367 && eval_delta < 0 {
-            depth += 1;
-        }
-
-        if !tt_pv && depth >= 2 && reduction > 0 && eval_delta > 59 {
-            depth -= 1;
-        }
-    }
-
-    let potential_singularity = depth >= 5 + tt_pv as i32
-        && tt_depth >= depth - 3
-        && tt_bound != Bound::Upper
-        && is_valid(tt_score)
-        && !is_decisive(tt_score);
-
     let improvement = if in_check {
         0
     } else if is_valid(td.stack[ply - 2].eval) {
@@ -494,7 +474,38 @@ fn search<NODE: NodeType>(
         0
     };
 
+    let counter_improvement = if in_check {
+        0
+    } else if is_valid(td.stack[ply - 1].eval) {
+        eval + td.stack[ply - 1].eval
+    } else if is_valid(td.stack[ply - 3].eval) {
+        eval + td.stack[ply - 3].eval
+    } else {
+        0
+    };
+
     let improving = improvement > 0;
+    let counter_improving = counter_improvement > 0;
+
+    // Hindsight reductions
+    if !NODE::ROOT && !in_check && !excluded && is_valid(td.stack[ply - 1].eval) {
+        let eval_delta = eval + td.stack[ply - 1].eval;
+        let reduction = td.stack[ply - 1].reduction;
+
+        if reduction >= 2367 && counter_improvement < 0 {
+            depth += 1;
+        }
+
+        if !tt_pv && depth >= 2 && reduction > 0 && counter_improvement > 59 {
+            depth -= 1;
+        }
+    }
+
+    let potential_singularity = depth >= 5 + tt_pv as i32
+        && tt_depth >= depth - 3
+        && tt_bound != Bound::Upper
+        && is_valid(tt_score)
+        && !is_decisive(tt_score);
 
     // Razoring
     if !NODE::PV
