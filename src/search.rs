@@ -494,7 +494,7 @@ fn search<NODE: NodeType>(
         0
     };
 
-    let improving = improvement > 0;
+    let mut improving = improvement > 0;
 
     // Razoring
     if !NODE::PV
@@ -583,6 +583,8 @@ fn search<NODE: NodeType>(
             }
         }
     }
+
+    improving |= estimated_score >= beta;
 
     // ProbCut
     let mut probcut_beta = beta + 270 - 75 * improving as i32;
