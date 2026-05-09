@@ -859,7 +859,7 @@ fn search<NODE: NodeType>(
         }
         // Full Depth Search (FDS)
         else if !NODE::PV || move_count >= 2 {
-            let mut reduction = 0;
+            let mut reduction = 232 * depth.ilog2() as i32;
 
             reduction -= 48 * move_count;
             reduction -= 2408 * correction_value.abs() / 1024;
