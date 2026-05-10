@@ -848,7 +848,9 @@ fn search<NODE: NodeType>(
 
             if score > alpha {
                 if !NODE::ROOT {
-                    new_depth += (score > best_score + 61) as i32;
+                    let deeper_margin =
+                        if td.id == 0 { 61 } else { 33 + ((td.nodes() + td.id as u64 * 23) % 56) as i32 };
+                    new_depth += (score > best_score + deeper_margin) as i32;
                     new_depth -= (score < best_score + 8) as i32;
                 }
 
