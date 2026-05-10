@@ -662,13 +662,10 @@ fn search<NODE: NodeType>(
         }
 
         if singular_score < singular_beta {
-            let double_margin = 196 * NODE::PV as i32 + 58 * (NODE::PV && !tt_was_pv) as i32
-                - 16 * tt_move.is_quiet() as i32
-                - 16 * correction_value.abs() / 128;
-            let triple_margin = 249 * NODE::PV as i32 + 58 * (NODE::PV && !tt_was_pv) as i32
-                - 16 * tt_move.is_quiet() as i32
-                - 15 * correction_value.abs() / 128
-                + 32;
+            let double_margin =
+                196 * NODE::PV as i32 - 16 * tt_move.is_quiet() as i32 - 16 * correction_value.abs() / 128;
+            let triple_margin =
+                249 * NODE::PV as i32 - 16 * tt_move.is_quiet() as i32 - 15 * correction_value.abs() / 128 + 32;
 
             extension = 1;
             extension += (singular_score < singular_beta - double_margin) as i32;
