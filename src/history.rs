@@ -12,32 +12,35 @@ fn apply_bonus<const MAX: i32>(entry: &mut i16, bonus: i32) {
 }
 
 struct QuietHistoryEntry {
-    factorizer: i16,
-    buckets: [[i16; 2]; 2],
+    factorizer: AtomicI16,
+    buckets: [[AtomicI16; 2]; 2],
 }
 
 impl QuietHistoryEntry {
     const MAX_FACTORIZER: i32 = 1852;
     const MAX_BUCKET: i32 = 6324;
 
-    pub const fn bucket(&self, threats: Bitboard, mv: Move) -> i16 {
+    pub fn bucket(&self, threats: Bitboard, mv: Move) -> i16 {
         let from_threatened = threats.contains(mv.from()) as usize;
         let to_threatened = threats.contains(mv.to()) as usize;
-
-        self.buckets[from_threatened][to_threatened]
+        self.buckets[from_threatened][to_threatened].load(Ordering::Relaxed)
     }
 
-    pub fn update_factorizer(&mut self, bonus: i32) {
-        let entry = &mut self.factorizer;
-        apply_bonus::<{ Self::MAX_FACTORIZER }>(entry, bonus);
+    pub fn update_factorizer(&self, bonus: i32) {
+        let current = self.factorizer.load(Ordering::Relaxed) as i32;
+        let bonus = bonus.clamp(-Self::MAX_FACTORIZER, Self::MAX_FACTORIZER);
+        let new = current + bonus - bonus.abs() * current / Self::MAX_FACTORIZER;
+        self.factorizer.store(new as i16, Ordering::Relaxed);
     }
 
-    pub fn update_bucket(&mut self, threats: Bitboard, mv: Move, bonus: i32) {
+    pub fn update_bucket(&self, threats: Bitboard, mv: Move, bonus: i32) {
         let from_threatened = threats.contains(mv.from()) as usize;
         let to_threatened = threats.contains(mv.to()) as usize;
-
-        let entry = &mut self.buckets[from_threatened][to_threatened];
-        apply_bonus::<{ Self::MAX_BUCKET }>(entry, bonus);
+        let entry = &self.buckets[from_threatened][to_threatened];
+        let current = entry.load(Ordering::Relaxed) as i32;
+        let bonus = bonus.clamp(-Self::MAX_BUCKET, Self::MAX_BUCKET);
+        let new = current + bonus - bonus.abs() * current / Self::MAX_BUCKET;
+        entry.store(new as i16, Ordering::Relaxed);
     }
 }
 
@@ -48,12 +51,11 @@ pub struct QuietHistory {
 impl QuietHistory {
     pub fn get(&self, threats: Bitboard, stm: Color, mv: Move) -> i32 {
         let entry = &self.entries[stm][mv.from()][mv.to()];
-        (entry.factorizer + entry.bucket(threats, mv)) as i32
+        (entry.factorizer.load(Ordering::Relaxed) + entry.bucket(threats, mv)) as i32
     }
 
-    pub fn update(&mut self, threats: Bitboard, stm: Color, mv: Move, bonus: i32) {
-        let entry = &mut self.entries[stm][mv.from()][mv.to()];
-
+    pub fn update(&self, threats: Bitboard, stm: Color, mv: Move, bonus: i32) {
+        let entry = &self.entries[stm][mv.from()][mv.to()];
         entry.update_factorizer(bonus);
         entry.update_bucket(threats, mv, bonus);
     }
@@ -66,8 +68,8 @@ impl Default for QuietHistory {
 }
 
 struct NoisyHistoryEntry {
-    factorizer: i16,
-    buckets: [[i16; 2]; 7],
+    factorizer: AtomicI16,
+    buckets: [[AtomicI16; 2]; 7],
 }
 
 impl NoisyHistoryEntry {
@@ -76,18 +78,23 @@ impl NoisyHistoryEntry {
 
     pub fn bucket(&self, threats: Bitboard, sq: Square, captured: PieceType) -> i16 {
         let threatened = threats.contains(sq) as usize;
-        self.buckets[captured][threatened]
+        self.buckets[captured][threatened].load(Ordering::Relaxed)
     }
 
-    pub fn update_factorizer(&mut self, bonus: i32) {
-        let entry = &mut self.factorizer;
-        apply_bonus::<{ Self::MAX_FACTORIZER }>(entry, bonus);
+    pub fn update_factorizer(&self, bonus: i32) {
+        let current = self.factorizer.load(Ordering::Relaxed) as i32;
+        let bonus = bonus.clamp(-Self::MAX_FACTORIZER, Self::MAX_FACTORIZER);
+        let new = current + bonus - bonus.abs() * current / Self::MAX_FACTORIZER;
+        self.factorizer.store(new as i16, Ordering::Relaxed);
     }
 
-    pub fn update_bucket(&mut self, threats: Bitboard, sq: Square, captured: PieceType, bonus: i32) {
+    pub fn update_bucket(&self, threats: Bitboard, sq: Square, captured: PieceType, bonus: i32) {
         let threatened = threats.contains(sq) as usize;
-        let entry = &mut self.buckets[captured][threatened];
-        apply_bonus::<{ Self::MAX_BUCKET }>(entry, bonus);
+        let entry = &self.buckets[captured][threatened];
+        let current = entry.load(Ordering::Relaxed) as i32;
+        let bonus = bonus.clamp(-Self::MAX_BUCKET, Self::MAX_BUCKET);
+        let new = current + bonus - bonus.abs() * current / Self::MAX_BUCKET;
+        entry.store(new as i16, Ordering::Relaxed);
     }
 }
 
@@ -99,12 +106,11 @@ pub struct NoisyHistory {
 impl NoisyHistory {
     pub fn get(&self, threats: Bitboard, piece: Piece, sq: Square, captured: PieceType) -> i32 {
         let entry = &self.entries[piece][sq];
-        (entry.factorizer + entry.bucket(threats, sq, captured)) as i32
+        (entry.factorizer.load(Ordering::Relaxed) + entry.bucket(threats, sq, captured)) as i32
     }
 
-    pub fn update(&mut self, threats: Bitboard, piece: Piece, sq: Square, captured: PieceType, bonus: i32) {
-        let entry = &mut self.entries[piece][sq];
-
+    pub fn update(&self, threats: Bitboard, piece: Piece, sq: Square, captured: PieceType, bonus: i32) {
+        let entry = &self.entries[piece][sq];
         entry.update_factorizer(bonus);
         entry.update_bucket(threats, sq, captured, bonus);
     }

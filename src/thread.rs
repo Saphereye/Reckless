@@ -87,12 +87,14 @@ impl Default for Status {
 }
 
 #[derive(Default)]
-pub struct SharedCorrectionHistory {
+pub struct SharedHistory {
     pub pawn: CorrectionHistory,
     pub non_pawn: [CorrectionHistory; 2],
+    pub quiet: QuietHistory,
+    pub noisy: NoisyHistory,
 }
 
-impl NumaReplicable for SharedCorrectionHistory {
+impl NumaReplicable for SharedHistory {
     fn allocate() -> Arc<Self> {
         Arc::new(Self::default())
     }
@@ -107,7 +109,7 @@ pub struct SharedContext {
     pub root_in_tb: AtomicBool,
     pub soft_stop_votes: AtomicUsize,
     pub best_stats: [AtomicU32; MAX_MOVES],
-    pub history: Arc<NumaReplicated<SharedCorrectionHistory>>,
+    pub history: Arc<NumaReplicated<SharedHistory>>,
     pub parameters: Arc<NumaReplicated<ParametersHandle>>,
     pub numa_context: Arc<NumaReplicationContext>,
 }
@@ -135,15 +137,13 @@ impl Default for SharedContext {
 pub struct ThreadData {
     pub id: usize,
     pub shared: Arc<SharedContext>,
-    pub corrhist: Arc<SharedCorrectionHistory>,
+    pub shared_hist: Arc<SharedHistory>,
     pub board: Board,
     pub time_manager: TimeManager,
     pub stack: Box<Stack>,
     pub nnue: Network,
     pub root_moves: Vec<RootMove>,
     pub pv_table: PrincipalVariationTable,
-    pub noisy_history: NoisyHistory,
-    pub quiet_history: QuietHistory,
     pub continuation_history: ContinuationHistory,
     pub continuation_corrhist: ContinuationCorrectionHistory,
     pub best_move_changes: usize,
@@ -168,15 +168,13 @@ impl ThreadData {
         Self {
             id: 0,
             shared,
-            corrhist,
+            shared_hist: corrhist,
             board: Board::starting_position(),
             time_manager: TimeManager::new(Limits::Infinite, 0, 0),
             stack: Stack::new(),
             nnue: Network::new(parameters),
             root_moves: Vec::new(),
             pv_table: PrincipalVariationTable::default(),
-            noisy_history: NoisyHistory::default(),
-            quiet_history: QuietHistory::default(),
             continuation_history: ContinuationHistory::default(),
             continuation_corrhist: ContinuationCorrectionHistory::default(),
             best_move_changes: 0,
@@ -198,8 +196,8 @@ impl ThreadData {
         self.shared.nodes.get(self.id)
     }
 
-    pub fn corrhist(&self) -> &SharedCorrectionHistory {
-        &self.corrhist
+    pub fn corrhist(&self) -> &SharedHistory {
+        &self.shared_hist
     }
 
     pub fn conthist(&self, ply: isize, index: isize, mv: Move) -> i32 {

@@ -352,7 +352,7 @@ fn search<NODE: NodeType>(
                 let quiet_bonus = (175 * depth - 79).min(1637);
                 let cont_bonus = (114 * depth - 57).min(1284);
 
-                td.quiet_history.update(td.board.all_threats(), stm, tt_move, quiet_bonus);
+                td.shared_hist.quiet.update(td.board.all_threats(), stm, tt_move, quiet_bonus);
                 update_continuation_histories(td, ply, td.board.moved_piece(tt_move), tt_move.to(), cont_bonus);
             }
 
@@ -461,7 +461,7 @@ fn search<NODE: NodeType>(
         let value = 824 * (-(eval + td.stack[ply - 1].eval)) / 128;
         let bonus = value.clamp(-133, 348);
 
-        td.quiet_history.update(td.board.prior_threats(), !stm, td.stack[ply - 1].mv, bonus);
+        td.shared_hist.quiet.update(td.board.prior_threats(), !stm, td.stack[ply - 1].mv, bonus);
     }
 
     // Hindsight reductions
@@ -714,10 +714,12 @@ fn search<NODE: NodeType>(
         let is_quiet = mv.is_quiet();
 
         let history = if is_quiet {
-            td.quiet_history.get(td.board.all_threats(), stm, mv) + td.conthist(ply, 1, mv) + td.conthist(ply, 2, mv)
+            td.shared_hist.quiet.get(td.board.all_threats(), stm, mv)
+                + td.conthist(ply, 1, mv)
+                + td.conthist(ply, 2, mv)
         } else {
             let captured = td.board.type_on(mv.to());
-            td.noisy_history.get(td.board.all_threats(), td.board.moved_piece(mv), mv.to(), captured)
+            td.shared_hist.noisy.get(td.board.all_threats(), td.board.moved_piece(mv), mv.to(), captured)
         };
 
         if !NODE::ROOT && !is_loss(best_score) {
@@ -1020,7 +1022,7 @@ fn search<NODE: NodeType>(
         let cont_malus = (371 * depth).min(914) - 44 - 18 * quiet_moves.len() as i32;
 
         if best_move.is_noisy() {
-            td.noisy_history.update(
+            td.shared_hist.noisy.update(
                 td.board.all_threats(),
                 td.board.moved_piece(best_move),
                 best_move.to(),
@@ -1028,18 +1030,24 @@ fn search<NODE: NodeType>(
                 noisy_bonus,
             );
         } else {
-            td.quiet_history.update(td.board.all_threats(), stm, best_move, quiet_bonus);
+            td.shared_hist.quiet.update(td.board.all_threats(), stm, best_move, quiet_bonus);
             update_continuation_histories(td, ply, td.board.moved_piece(best_move), best_move.to(), cont_bonus);
 
             for &mv in quiet_moves.iter() {
-                td.quiet_history.update(td.board.all_threats(), stm, mv, -quiet_malus);
+                td.shared_hist.quiet.update(td.board.all_threats(), stm, mv, -quiet_malus);
                 update_continuation_histories(td, ply, td.board.moved_piece(mv), mv.to(), -cont_malus);
             }
         }
 
         for &mv in noisy_moves.iter() {
             let captured = td.board.type_on(mv.to());
-            td.noisy_history.update(td.board.all_threats(), td.board.moved_piece(mv), mv.to(), captured, -noisy_malus);
+            td.shared_hist.noisy.update(
+                td.board.all_threats(),
+                td.board.moved_piece(mv),
+                mv.to(),
+                captured,
+                -noisy_malus,
+            );
         }
 
         if !NODE::ROOT && td.stack[ply - 1].mv.is_quiet() && td.stack[ply - 1].move_count < 2 {
@@ -1064,7 +1072,7 @@ fn search<NODE: NodeType>(
 
             let scaled_bonus = factor * (165 * depth - 35).min(2467) / 128;
 
-            td.quiet_history.update(td.board.prior_threats(), !stm, prior_move, scaled_bonus);
+            td.shared_hist.quiet.update(td.board.prior_threats(), !stm, prior_move, scaled_bonus);
 
             let entry = &td.stack[ply - 2];
             if entry.mv.is_present() {
@@ -1075,7 +1083,7 @@ fn search<NODE: NodeType>(
             let captured = td.board.captured_piece().unwrap_or_default().piece_type();
             let bonus = (60 * depth).min(600);
 
-            td.noisy_history.update(
+            td.shared_hist.noisy.update(
                 td.board.prior_threats(),
                 td.board.piece_on(prior_move.to()),
                 prior_move.to(),
@@ -1276,7 +1284,7 @@ fn qsearch<NODE: NodeType>(td: &mut ThreadData, mut alpha: i32, beta: i32, ply: 
     if best_score >= beta && best_move.is_noisy() {
         let bonus = 106;
 
-        td.noisy_history.update(
+        td.shared_hist.noisy.update(
             td.board.all_threats(),
             td.board.moved_piece(best_move),
             best_move.to(),
