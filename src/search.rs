@@ -725,7 +725,8 @@ fn search<NODE: NodeType>(
             if !in_check
                 && !td.board.is_direct_check(mv)
                 && is_quiet
-                && move_count >= (3006 + 70 * improvement / 16 + 1455 * depth * depth + 68 * history / 1024) / 1024
+                && move_count as i32
+                    >= ((3006 + 70 * improvement / 16 + 1455 * depth * depth + 68 * history / 1024) / 1024)
             {
                 skip_quiets = true;
                 continue;
@@ -785,7 +786,8 @@ fn search<NODE: NodeType>(
         if depth >= 2 && move_count >= 2 {
             let mut reduction = 225 * (move_count.ilog2() * depth.ilog2()) as i32;
 
-            reduction -= 68 * move_count;
+            // dbg_stats(move_count, 2);
+            reduction -= 68 * move_count as i32;
             reduction -= 3297 * correction_value.abs() / 1024;
             reduction += 1306 * (bound == Bound::Exact) as i32;
 
@@ -832,7 +834,7 @@ fn search<NODE: NodeType>(
                 reduction += (512 * (margin - 160) / 128).clamp(0, 2048);
             }
 
-            if !NODE::PV && td.stack[ply - 1].reduction > reduction + 485 {
+            if !NODE::PV && td.stack[ply - 1].reduction as i32 > reduction + 485 {
                 reduction += 129;
             }
 
@@ -841,7 +843,12 @@ fn search<NODE: NodeType>(
             let reduced_depth =
                 (new_depth - reduction / 1024).clamp(1, new_depth + (move_count <= 3) as i32 + 1) + 2 * NODE::PV as i32;
 
-            td.stack[ply].reduction = reduction;
+            debug_assert!(
+                reduction >= i16::MIN as i32 && reduction <= i16::MAX as i32,
+                "reduction overflow: {}",
+                reduction
+            );
+            td.stack[ply].reduction = reduction as i16;
             score = -search::<NonPV>(td, -alpha - 1, -alpha, reduced_depth, true, ply + 1);
             td.stack[ply].reduction = 0;
             current_search_count += 1;
@@ -862,7 +869,7 @@ fn search<NODE: NodeType>(
         else if !NODE::PV || move_count >= 2 {
             let mut reduction = 232 * (move_count.ilog2() * depth.ilog2()) as i32;
 
-            reduction -= 48 * move_count;
+            reduction -= 48 * move_count as i32;
             reduction -= 2408 * correction_value.abs() / 1024;
 
             if is_quiet {
@@ -900,7 +907,7 @@ fn search<NODE: NodeType>(
                 reduction -= 3281;
             }
 
-            if td.stack[ply - 1].reduction > reduction + 562 {
+            if td.stack[ply - 1].reduction as i32 > reduction + 562 {
                 reduction += 130;
             }
 
@@ -1229,6 +1236,8 @@ fn qsearch<NODE: NodeType>(td: &mut ThreadData, mut alpha: i32, beta: i32, ply: 
 
     while let Some(mv) = move_picker.next::<NODE>(td, skip_quiets(best_score), ply) {
         move_count += 1;
+        // dbg_stats(move_count, 0);
+        debug_assert!(move_count <= u8::MAX as i32, "move_count overflow: {}", move_count);
 
         if !is_loss(best_score) {
             // Late Move Pruning (LMP)

@@ -40,9 +40,9 @@ pub struct StackEntry {
     pub excluded: Move,
     pub tt_move: Move,
     pub tt_pv: bool,
-    pub cutoff_count: i32,
-    pub move_count: i32,
-    pub reduction: i32,
+    pub cutoff_count: u8,
+    pub move_count: u8,
+    pub reduction: i16,
     pub conthist: *mut [[i16; 64]; 13],
     pub contcorrhist: *mut [[i16; 64]; 13],
 }
