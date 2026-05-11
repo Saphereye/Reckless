@@ -62,10 +62,10 @@ impl QuietHistory {
         for color in self.entries.iter_mut() {
             for from in color.iter_mut() {
                 for entry in from.iter_mut() {
-                    entry.factorizer = entry.factorizer * 500 / 1024;
+                    entry.factorizer = entry.factorizer * 700 / 1024;
                     for bucket_row in entry.buckets.iter_mut() {
                         for b in bucket_row.iter_mut() {
-                            *b = *b * 500 / 1024;
+                            *b = *b * 700 / 1024;
                         }
                     }
                 }
