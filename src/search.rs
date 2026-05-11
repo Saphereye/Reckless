@@ -123,7 +123,21 @@ pub fn start(td: &mut ThreadData, report: Report, thread_count: usize) {
                 // Root Search
                 let score = search::<Root>(td, alpha, beta, (depth - reduction).max(1), false, 0);
 
-                td.root_moves[td.pv_index..td.pv_end].sort_by_key(|rm| std::cmp::Reverse(rm.score));
+                let moves = &mut td.root_moves[td.pv_index..td.pv_end];
+
+                for i in 0..moves.len() {
+                    let mut best = i;
+
+                    for j in (i + 1)..moves.len() {
+                        if moves[j].score > moves[best].score {
+                            best = j;
+                        }
+                    }
+
+                    if best != i {
+                        moves.swap(i, best);
+                    }
+                }
 
                 if td.shared.status.get() == Status::STOPPED {
                     break;
