@@ -57,6 +57,21 @@ impl QuietHistory {
         entry.update_factorizer(bonus);
         entry.update_bucket(threats, mv, bonus);
     }
+
+    pub fn decay(&mut self) {
+        for color in self.entries.iter_mut() {
+            for from in color.iter_mut() {
+                for entry in from.iter_mut() {
+                    entry.factorizer = entry.factorizer * 500 / 1024;
+                    for bucket_row in entry.buckets.iter_mut() {
+                        for b in bucket_row.iter_mut() {
+                            *b = *b * 500 / 1024;
+                        }
+                    }
+                }
+            }
+        }
+    }
 }
 
 impl Default for QuietHistory {

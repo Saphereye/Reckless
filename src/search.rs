@@ -84,6 +84,8 @@ pub fn start(td: &mut ThreadData, report: Report, thread_count: usize) {
         td.pv_start = 0;
         td.pv_end = 0;
 
+        td.quiet_history.decay();
+
         for rm in &mut td.root_moves {
             rm.previous_score = rm.score;
         }
