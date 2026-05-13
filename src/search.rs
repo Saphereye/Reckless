@@ -672,7 +672,7 @@ fn search<NODE: NodeType>(
 
             extension = 1;
             extension += (singular_score < singular_beta - double_margin) as i32;
-            extension += (singular_score < singular_beta - triple_margin) as i32;
+            // extension += (singular_score < singular_beta - triple_margin) as i32;
         }
         // Multi-Cut
         else if singular_score >= beta && !is_decisive(singular_score) {
