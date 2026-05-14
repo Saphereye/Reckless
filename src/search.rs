@@ -804,6 +804,10 @@ fn search<NODE: NodeType>(
             reduction += 459 * (is_valid(tt_score) && tt_score <= alpha) as i32;
             reduction += 286 * (is_valid(tt_score) && tt_depth < depth) as i32;
 
+            if is_valid(tt_score) {
+                reduction -= 300 * (tt_score - eval).abs().min(200) / 200;
+            }
+
             if is_quiet {
                 reduction += 1971;
                 reduction -= 179 * history / 1024;
