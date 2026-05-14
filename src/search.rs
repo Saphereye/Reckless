@@ -140,13 +140,13 @@ pub fn start(td: &mut ThreadData, report: Report, thread_count: usize) {
                     s if s <= alpha => {
                         alpha = (score - delta).max(-Score::INFINITE);
                         beta = (alpha + delta).min(beta);
-                        delta += 26 * delta / 128;
+                        delta += delta;
                     }
                     s if s >= beta => {
                         alpha = (beta - delta).max(alpha);
                         beta = (score + delta).min(Score::INFINITE);
                         reduction += 1;
-                        delta += 60 * delta / 128;
+                        delta += delta;
                     }
                     _ => {
                         average[td.pv_index] = if average[td.pv_index] == Score::NONE {
