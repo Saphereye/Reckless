@@ -366,6 +366,15 @@ fn search<NODE: NodeType>(
             if td.board.halfmove_clock() < 90 {
                 return tt_score;
             }
+        } else if !NODE::PV
+            && !excluded
+            && tt_depth > depth - (tt_score <= beta) as i32
+            && is_valid(tt_score)
+            && tt_bound != Bound::Exact
+            && matches!((tt_score >= beta, tt_bound), (true, Bound::Upper) | (false, Bound::Lower))
+            && depth > 5
+        {
+            tt_move = Move::NULL;
         }
     }
 
