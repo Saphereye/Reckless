@@ -520,7 +520,7 @@ fn search<NODE: NodeType>(
         && !excluded
         && estimated_score
             >= beta
-                + (1189 * depth * depth / 128 - (83 * improving as i32)
+                + (1189 * depth * depth / 128 - 150 * improvement / 1024
                     + 23 * depth
                     + 600 * correction_value.abs() / 1024
                     - 60 * (td.board.all_threats() & td.board.colors(stm)).is_empty() as i32
