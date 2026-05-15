@@ -338,6 +338,27 @@ pub struct Parameters {
 impl Parameters {
     fn embedded() -> &'static Parameters {
         static EMBEDDED: Parameters = unsafe { std::mem::transmute(*include_bytes!(env!("MODEL"))) };
+
+        #[cfg(target_os = "linux")]
+        {
+            use libc::{_SC_PAGESIZE, MADV_HUGEPAGE, madvise, sysconf};
+
+            let page_size = unsafe { sysconf(_SC_PAGESIZE) as usize };
+            assert!(page_size != 0 && page_size != usize::MAX);
+
+            let start = &EMBEDDED as *const Parameters as usize;
+            let end = start + std::mem::size_of::<Parameters>();
+            let aligned_start = start - (start % page_size);
+            let aligned_end = (end + page_size - 1) - ((end + page_size - 1) % page_size);
+            let ptr = aligned_start as *mut std::ffi::c_void;
+            let len = aligned_end - aligned_start;
+
+            let status = unsafe { madvise(ptr, len, MADV_HUGEPAGE) };
+            if status != 0 {
+                eprintln!("warning: failed to madvise embedded NNUE parameters for huge pages");
+            }
+        }
+
         &EMBEDDED
     }
 
