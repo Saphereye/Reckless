@@ -119,6 +119,10 @@ impl NumaConfig {
         threads > largest_node_size / 2 || threads >= 4 * sufficient_nodes
     }
 
+    pub fn available_cpus(&self) -> Vec<CpuIndex> {
+        self.node_by_cpu.keys().copied().collect()
+    }
+
     pub fn distribute_threads_among_numa_nodes(&self, num_threads: CpuIndex) -> Vec<NumaIndex> {
         if self.nodes.len() == 1 {
             return vec![0; num_threads];
@@ -169,6 +173,26 @@ impl NumaConfig {
         }
 
         NumaReplicatedAccessToken::new(node)
+    }
+
+    pub fn bind_current_thread_to_cpu(&self, cpu: CpuIndex) {
+        assert!(self.node_by_cpu.contains_key(&cpu));
+
+        #[cfg(all(target_os = "linux", not(target_os = "android")))]
+        {
+            use libc::{CPU_SET, CPU_ZERO, cpu_set_t, sched_setaffinity, sched_yield};
+
+            let mut mask: cpu_set_t = unsafe { std::mem::zeroed() };
+            unsafe { CPU_ZERO(&mut mask) };
+            unsafe { CPU_SET(cpu, &mut mask) };
+
+            let status = unsafe { sched_setaffinity(0, std::mem::size_of::<cpu_set_t>(), &mask as *const cpu_set_t) };
+            if status != 0 {
+                panic!("sched_setaffinity failed");
+            }
+
+            unsafe { sched_yield() };
+        }
     }
 
     pub fn execute_on_numa_node<F: FnOnce() + Send + 'static>(&self, n: NumaIndex, f: F) {

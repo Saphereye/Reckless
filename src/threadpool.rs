@@ -275,6 +275,7 @@ fn make_thread_data(shared: Arc<SharedContext>, worker_threads: &[WorkerThread])
         let cfg = shared.numa_context.get_numa_config();
         let should_bind = cfg.suggests_binding_threads(worker_threads.len());
         let numa_nodes = cfg.distribute_threads_among_numa_nodes(worker_threads.len());
+        let cpus = cfg.available_cpus();
 
         let handles = worker_threads
             .iter()
@@ -284,6 +285,7 @@ fn make_thread_data(shared: Arc<SharedContext>, worker_threads: &[WorkerThread])
                 let shared = shared.clone();
                 let cfg = cfg.clone();
                 let numa_node = numa_nodes[index];
+                let cpu = cpus[index % cpus.len()];
                 let join_handle = scope.spawn_into(
                     move || {
                         let token = if should_bind {
@@ -291,6 +293,9 @@ fn make_thread_data(shared: Arc<SharedContext>, worker_threads: &[WorkerThread])
                         } else {
                             NumaReplicatedAccessToken::new(0)
                         };
+                        if !should_bind {
+                            cfg.bind_current_thread_to_cpu(cpu);
+                        }
                         tx.send(Box::new(ThreadData::new(shared, token))).unwrap();
                     },
                     worker,
