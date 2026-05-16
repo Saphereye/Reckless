@@ -703,7 +703,7 @@ fn search<NODE: NodeType>(
     let mut move_picker = MovePicker::new(tt_move, None);
     let mut skip_quiets = false;
     let mut current_search_count = 0;
-    let mut tt_move_score = Score::NONE;
+    let mut tt_move_score = if is_valid(tt_score) { tt_score } else { Score::NONE };
 
     while let Some(mv) = move_picker.next::<NODE>(td, skip_quiets, ply) {
         if mv == td.stack[ply].excluded {
