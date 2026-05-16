@@ -326,6 +326,8 @@ fn search<NODE: NodeType>(
 
     let mut depth = depth.min(MAX_PLY as i32 - 1);
 
+    let correction_value = eval_correction(td, ply);
+
     let hash = td.board.hash();
     let entry = td.shared.tt.read(hash, td.board.halfmove_clock(), ply);
 
@@ -405,8 +407,6 @@ fn search<NODE: NodeType>(
             }
         }
     }
-
-    let correction_value = eval_correction(td, ply);
 
     let raw_eval;
     let mut eval;
