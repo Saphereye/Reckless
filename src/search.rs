@@ -545,7 +545,7 @@ fn search<NODE: NodeType>(
         && !is_win(estimated_score)
         && !(tt_bound == Bound::Lower
             && tt_move.is_capture()
-            && td.board.piece_on(tt_move.to()).value() >= PieceType::Rook.value())
+            && td.board.piece_on(tt_move.to()).value() >= PieceType::Queen.value())
     {
         debug_assert_ne!(td.stack[ply - 1].mv, Move::NULL);
 
