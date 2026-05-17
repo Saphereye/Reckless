@@ -363,7 +363,7 @@ impl Drop for TranspositionTable {
 
 unsafe fn allocate(threads: usize, size_mb: usize) -> (*mut Cluster, usize) {
     #[cfg(target_os = "linux")]
-    use libc::{MADV_HUGEPAGE, MAP_ANONYMOUS, MAP_PRIVATE, PROT_READ, PROT_WRITE, madvise, mmap};
+    use libc::{MADV_HUGEPAGE, MADV_RANDOM, MAP_ANONYMOUS, MAP_PRIVATE, PROT_READ, PROT_WRITE, madvise, mmap};
 
     let size = size_mb * MEGABYTE;
     let len = size / CLUSTER_SIZE;
@@ -372,6 +372,7 @@ unsafe fn allocate(threads: usize, size_mb: usize) -> (*mut Cluster, usize) {
     let ptr = {
         let ptr = mmap(std::ptr::null_mut(), size, PROT_READ | PROT_WRITE, MAP_PRIVATE | MAP_ANONYMOUS, -1, 0);
         madvise(ptr, size, MADV_HUGEPAGE);
+        madvise(ptr, size, MADV_RANDOM);
         ptr.cast()
     };
 
