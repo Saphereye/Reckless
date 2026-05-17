@@ -554,11 +554,7 @@ fn search<NODE: NodeType>(
     {
         debug_assert_ne!(td.stack[ply - 1].mv, Move::NULL);
 
-        let prior_history = if td.stack[ply - 1].mv.is_quiet() {
-            td.quiet_history.get(td.board.prior_threats(), !stm, td.stack[ply - 1].mv)
-        } else {
-            0
-        };
+        let prior_history = td.conthist(ply, 1, td.stack[ply - 1].mv);
 
         let r =
             (4311 - 200 + 1024 * improving as i32 + 260 * depth + 493 * (estimated_score - beta).clamp(0, 1003) / 128
