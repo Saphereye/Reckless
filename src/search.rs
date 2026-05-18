@@ -543,7 +543,7 @@ fn search<NODE: NodeType>(
         && td.board.material() > 624
         && !is_loss(beta)
         && !is_win(estimated_score)
-        && !(tt_bound == Bound::Lower && tt_move.is_capture() && td.board.see(tt_move, 500))
+        && !(tt_bound == Bound::Lower && tt_move.is_capture() && td.board.see(tt_move, 403))
     {
         debug_assert_ne!(td.stack[ply - 1].mv, Move::NULL);
 
