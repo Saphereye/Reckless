@@ -197,9 +197,14 @@ pub fn start(td: &mut ThreadData, report: Report, thread_count: usize) {
             pv_stability = 0;
         }
 
-        if td.root_moves[0].score != -Score::INFINITE
+        let forgotten_mate = is_valid(last_best_rootmove.score)
+            && is_win(last_best_rootmove.score)
+            && (td.root_moves[0].score < last_best_rootmove.score || td.root_moves[0].score == -Score::INFINITE);
+
+        if (td.root_moves[0].score != -Score::INFINITE
             && is_loss(td.root_moves[0].score)
-            && td.shared.status.get() == Status::STOPPED
+            && td.shared.status.get() == Status::STOPPED)
+            || forgotten_mate
         {
             if let Some(pos) = td.root_moves.iter().position(|rm| rm.mv == last_best_rootmove.mv) {
                 td.root_moves.remove(pos);
