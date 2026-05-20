@@ -788,11 +788,19 @@ fn search<NODE: NodeType>(
             }
         }
 
+        let recapture_extension = !NODE::ROOT
+            && depth >= 4
+            && mv.is_capture()
+            && td.stack[ply - 1].mv.is_capture()
+            && mv.to() == td.stack[ply - 1].mv.to();
+        // dbg_hit(recapture_extension, 0);
+
         let initial_nodes = td.nodes();
 
         make_move(td, ply, mv);
 
-        let mut new_depth = depth - 1 + if move_count == 1 { extension } else { 0 };
+        let mut new_depth =
+            depth - 1 + if move_count == 1 { extension + (recapture_extension && extension < 2) as i32 } else { 0 };
         let mut score = Score::ZERO;
 
         // Late Move Reductions (LMR)
