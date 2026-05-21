@@ -827,7 +827,7 @@ fn search<NODE: NodeType>(
             if tt_pv {
                 reduction -= 368;
                 reduction -= 570 * (is_valid(tt_score) && tt_score > alpha) as i32;
-                reduction -= 722 * (is_valid(tt_score) && tt_depth >= depth) as i32;
+                reduction -= 722 * (is_valid(tt_score) && tt_depth > depth) as i32;
             }
 
             if !tt_pv && cut_node {
