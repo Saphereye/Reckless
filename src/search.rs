@@ -1405,8 +1405,5 @@ fn undo_move(td: &mut ThreadData, mv: Move) {
 }
 
 fn lerp(a: i32, b: i32, t: f32) -> i32 {
-    // let original = t.mul_add((b - a) as f32, a as f32) as i32;
-    let patch = unsafe { (a as f32 + t * (b - a) as f32).to_int_unchecked() };
-    // debug_assert_eq!(original, patch, "lerp mismatch: a={a} b={b} t={t}");
-    patch
+    unsafe { t.mul_add((b - a) as f32, a as f32).to_int_unchecked() }
 }
