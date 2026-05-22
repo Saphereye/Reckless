@@ -1052,7 +1052,8 @@ fn search<NODE: NodeType>(
                 noisy_bonus,
             );
         } else {
-            let move_count_scale = 1024 + 32 * move_count.min(16) as i32;
+            let effective_count = move_count - tt_move.is_present() as i32;
+            let move_count_scale = 1024 + 128 * effective_count.min(8) as i32;
             let scaled_quiet_bonus = quiet_bonus * move_count_scale / 1024;
             let scaled_cont_bonus = cont_bonus * move_count_scale / 1024;
             td.quiet_history.update(td.board.all_threats(), stm, best_move, scaled_quiet_bonus);
