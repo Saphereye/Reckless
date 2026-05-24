@@ -120,12 +120,25 @@ impl Cluster {
         self.keys |= (key as u64) << (index * 16);
     }
 
+    #[cfg(not(target_arch = "x86_64"))]
     const fn lookup_key(&self, key: u16) -> usize {
         let bits = 0x0001_0001_0001_0001;
         let needle = key as u64 * bits;
         let zeros = self.keys ^ needle;
         let matches = zeros.wrapping_sub(bits) & !zeros & (bits << 15);
         (matches.trailing_zeros() / 16) as usize
+    }
+
+    #[cfg(target_arch = "x86_64")]
+    fn lookup_key(&self, key: u16) -> usize {
+        use std::arch::x86_64::*;
+        unsafe {
+            let needle = _mm_set1_epi16(key as i16);
+            let cluster = _mm_cvtsi64_si128(self.keys as i64);
+            let cmp = _mm_cmpeq_epi16(needle, cluster);
+            let mask = _mm_movemask_epi8(cmp) as u32;
+            (mask.trailing_zeros() / 2) as usize
+        }
     }
 }
 
