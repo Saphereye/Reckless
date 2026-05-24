@@ -1300,7 +1300,7 @@ fn qsearch<NODE: NodeType>(td: &mut ThreadData, mut alpha: i32, beta: i32, ply: 
     }
 
     if best_score >= beta && best_move.is_noisy() {
-        let bonus = 94;
+        let bonus = 94 + 20 * td.board.in_check() as i32;
 
         td.noisy_history.update(
             td.board.all_threats(),
