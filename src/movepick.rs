@@ -55,7 +55,7 @@ impl MovePicker {
             self.stage = Stage::GoodNoisy;
             td.board.append_noisy_moves(&mut self.list);
             self.remove_tt();
-            self.score_noisy(td);
+            self.score_noisy(td, ply);
         }
 
         if self.stage == Stage::GoodNoisy {
@@ -68,7 +68,7 @@ impl MovePicker {
                 }
 
                 if NODE::ROOT {
-                    self.score_noisy(td);
+                    self.score_noisy(td, ply);
                 }
 
                 self.noisy_count += 1;
@@ -125,7 +125,7 @@ impl MovePicker {
         }
     }
 
-    fn score_noisy(&mut self, td: &ThreadData) {
+    fn score_noisy(&mut self, td: &ThreadData, ply: isize) {
         let threats = td.board.all_threats();
 
         for entry in self.list.iter_mut() {
@@ -136,7 +136,13 @@ impl MovePicker {
             entry.score = 15704 * captured.value() / 1024
                 + td.noisy_history.get(threats, td.board.moved_piece(mv), mv.to(), captured)
                 + 4057 * (mv.is_promotion() && mv.promo_piece_type() == PieceType::Queen) as i32
-                + (200000 - 20000 * pt as i32) * td.board.in_check() as i32;
+                + (200000 - 20000 * pt as i32) * td.board.in_check() as i32
+                + td.capture_continuation_history.get(
+                    td.stack[ply - 1].cap_conthist,
+                    td.board.moved_piece(mv),
+                    mv.to(),
+                    captured,
+                );
         }
     }
 

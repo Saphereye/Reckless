@@ -1038,6 +1038,35 @@ fn search<NODE: NodeType>(
                 td.board.type_on(best_move.to()),
                 noisy_bonus,
             );
+
+            for offset in [1, 2] {
+                let entry = &td.stack[ply - offset];
+                if entry.mv.is_present() {
+                    td.capture_continuation_history.update(
+                        entry.cap_conthist,
+                        td.board.moved_piece(best_move),
+                        best_move.to(),
+                        td.board.type_on(best_move.to()),
+                        noisy_bonus,
+                    );
+                }
+            }
+
+            for &mv in noisy_moves.iter() {
+                let cap = td.board.type_on(mv.to());
+                for offset in [1, 2] {
+                    let entry = &td.stack[ply - offset];
+                    if entry.mv.is_present() {
+                        td.capture_continuation_history.update(
+                            entry.cap_conthist,
+                            td.board.moved_piece(mv),
+                            mv.to(),
+                            cap,
+                            -noisy_malus,
+                        );
+                    }
+                }
+            }
         } else {
             td.quiet_history.update(td.board.all_threats(), stm, best_move, quiet_bonus);
             update_continuation_histories(td, ply, td.board.moved_piece(best_move), best_move.to(), cont_bonus);
@@ -1379,6 +1408,12 @@ fn make_move(td: &mut ThreadData, ply: isize, mv: Move) {
         td.continuation_history.subtable_ptr(td.board.in_check(), mv.is_noisy(), td.board.moved_piece(mv), mv.to());
     td.stack[ply].contcorrhist =
         td.continuation_corrhist.subtable_ptr(td.board.in_check(), mv.is_noisy(), td.board.moved_piece(mv), mv.to());
+    td.stack[ply].cap_conthist = td.capture_continuation_history.subtable_ptr(
+        td.board.in_check(),
+        mv.is_noisy(),
+        td.board.moved_piece(mv),
+        mv.to(),
+    );
 
     td.shared.nodes.increment(td.id);
 

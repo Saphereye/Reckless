@@ -169,3 +169,38 @@ fn zeroed_box<T>() -> Box<T> {
         Box::<T>::from_raw(ptr.cast())
     }
 }
+
+type CaptureContinuationHistoryType = [[[[PieceToHistory<[i16; 7]>; 64]; 13]; 2]; 2];
+
+pub struct CaptureContinuationHistory {
+    entries: Box<CaptureContinuationHistoryType>,
+}
+
+impl CaptureContinuationHistory {
+    const MAX_HISTORY: i32 = 16800;
+
+    pub fn subtable_ptr(
+        &mut self, in_check: bool, capture: bool, piece: Piece, to: Square,
+    ) -> *mut PieceToHistory<[i16; 7]> {
+        &raw mut self.entries[in_check as usize][capture as usize][piece][to]
+    }
+
+    pub fn get(
+        &self, subtable_ptr: *mut PieceToHistory<[i16; 7]>, piece: Piece, sq: Square, captured: PieceType,
+    ) -> i32 {
+        unsafe { (&*subtable_ptr)[piece][sq][captured] as i32 }
+    }
+
+    pub fn update(
+        &self, subtable_ptr: *mut PieceToHistory<[i16; 7]>, piece: Piece, sq: Square, captured: PieceType, bonus: i32,
+    ) {
+        let entry = &mut unsafe { &mut *subtable_ptr }[piece][sq][captured];
+        apply_bonus::<{ Self::MAX_HISTORY }>(entry, bonus);
+    }
+}
+
+impl Default for CaptureContinuationHistory {
+    fn default() -> Self {
+        Self { entries: zeroed_box() }
+    }
+}
