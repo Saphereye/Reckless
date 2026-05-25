@@ -132,7 +132,7 @@ pub fn start(td: &mut ThreadData, report: Report, thread_count: usize) {
 
                 // td.root_moves[td.pv_index..td.pv_end].sort_by_key(|rm| std::cmp::Reverse(rm.score));
 
-                let c = -0.5;
+                let c = 0.5;
                 let total_nodes = td.nodes() as f32;
                 td.root_moves[td.pv_start..td.pv_end].sort_by(|a, b| {
                     let ucb_score = |rm: &RootMove| {
