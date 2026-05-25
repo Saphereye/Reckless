@@ -130,7 +130,20 @@ pub fn start(td: &mut ThreadData, report: Report, thread_count: usize) {
                 // Root Search
                 let score = search::<Root>(td, alpha, beta, (depth - reduction).max(1), false, 0);
 
-                td.root_moves[td.pv_index..td.pv_end].sort_by_key(|rm| std::cmp::Reverse(rm.score));
+                // td.root_moves[td.pv_index..td.pv_end].sort_by_key(|rm| std::cmp::Reverse(rm.score));
+
+                let c = -0.5;
+                let total_nodes = td.nodes() as f32;
+                td.root_moves[td.pv_start..td.pv_end].sort_by(|a, b| {
+                    let ucb_score = |rm: &RootMove| {
+                        let score = if rm.score != -Score::INFINITE { rm.score } else { rm.previous_score };
+                        let q = (score as f32 / 1000.0).clamp(-1.0, 1.0);
+                        let n = rm.nodes as f32;
+                        let exploration = if n == 0.0 { 1.0 } else { (total_nodes.ln() / n).sqrt() };
+                        q + c * exploration
+                    };
+                    ucb_score(b).partial_cmp(&ucb_score(a)).unwrap()
+                });
 
                 if td.shared.status.get() == Status::STOPPED {
                     break;
