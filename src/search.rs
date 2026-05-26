@@ -835,8 +835,9 @@ fn search<NODE: NodeType>(
             }
 
             if td.stack[ply + 1].cutoff_count > 2 {
-                reduction += 992;
-                reduction += 384 * (!NODE::PV && !cut_node) as i32;
+                reduction += 1144;
+                reduction += 100 * (td.stack[ply + 1].cutoff_count > 3) as i32;
+                reduction += 1024 * (!NODE::PV && !cut_node) as i32;
             }
 
             if is_valid(tt_move_score) && is_valid(singular_score) {
