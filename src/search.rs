@@ -448,6 +448,7 @@ fn search<NODE: NodeType>(
     td.stack[ply].tt_pv = tt_pv;
     td.stack[ply].reduction = 0;
     td.stack[ply].move_count = 0;
+    td.stack[ply + 1].cutoff_count = 0;
     td.stack[ply + 2].cutoff_count = 0;
 
     // Quiet move ordering using eval difference
