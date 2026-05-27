@@ -1031,11 +1031,21 @@ fn search<NODE: NodeType>(
         let noisy_bonus = (89 * depth).min(748) - 45 - 74 * cut_node as i32;
         let noisy_malus = (179 * depth).min(1391) - 57 - 23 * noisy_moves.len() as i32;
 
-        let quiet_bonus = (185 * depth).min(1648) - 85 - 58 * cut_node as i32;
-        let quiet_malus = (162 * depth).min(1198) - 46 - 34 * quiet_moves.len() as i32;
+        let mut quiet_bonus = (185 * depth).min(1648) - 85 - 58 * cut_node as i32;
+        let mut quiet_malus = (162 * depth).min(1198) - 46 - 34 * quiet_moves.len() as i32;
 
-        let cont_bonus = (107 * depth).min(1051) - 64 - 45 * cut_node as i32;
-        let cont_malus = (399 * depth).min(933) - 53 - 17 * quiet_moves.len() as i32;
+        let mut cont_bonus = (107 * depth).min(1051) - 64 - 45 * cut_node as i32;
+        let mut cont_malus = (399 * depth).min(933) - 53 - 17 * quiet_moves.len() as i32;
+
+        if !NODE::PV && !cut_node {
+            quiet_malus += quiet_bonus / 32;
+            cont_malus += cont_bonus / 32;
+
+            let searched = quiet_moves.len() + noisy_moves.len();
+
+            quiet_bonus += quiet_bonus * searched as i32 / 32;
+            cont_bonus += cont_bonus * searched as i32 / 32;
+        }
 
         if best_move.is_noisy() {
             td.noisy_history.update(
