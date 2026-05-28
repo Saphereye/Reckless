@@ -1038,13 +1038,13 @@ fn search<NODE: NodeType>(
         let mut cont_malus = (399 * depth).min(933) - 53 - 17 * quiet_moves.len() as i32;
 
         if !NODE::PV && !cut_node {
-            quiet_malus += quiet_bonus / 64;
-            cont_malus += cont_bonus / 64;
+            quiet_malus += quiet_bonus / 128;
+            cont_malus += cont_bonus / 128;
 
             let searched = quiet_moves.len() + noisy_moves.len();
 
-            quiet_bonus += quiet_bonus * searched as i32 / 64;
-            cont_bonus += cont_bonus * searched as i32 / 64;
+            quiet_bonus += quiet_bonus * searched as i32 / 128;
+            cont_bonus += cont_bonus * searched as i32 / 128;
         }
 
         if best_move.is_noisy() {
