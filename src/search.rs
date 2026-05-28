@@ -114,8 +114,9 @@ pub fn start(td: &mut ThreadData, report: Report, thread_count: usize) {
             // Aspiration Windows
             delta += average[td.pv_index] * average[td.pv_index] / 25704;
 
-            let mut alpha = (average[td.pv_index] - delta).max(-Score::INFINITE);
-            let mut beta = (average[td.pv_index] + delta).min(Score::INFINITE);
+            let skew = (td.id % 8) as i32 * 5;
+            let mut alpha = (average[td.pv_index] - delta - skew).max(-Score::INFINITE);
+            let mut beta = (average[td.pv_index] + delta + skew).min(Score::INFINITE);
 
             let best_avg = ((td.shared.best_stats[td.pv_index].load(Ordering::Acquire) & 0xffff) as i32 - 32768
                 + average[td.pv_index])
