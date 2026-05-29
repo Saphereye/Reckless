@@ -700,6 +700,17 @@ fn search<NODE: NodeType>(
         extension = 1;
     }
 
+    let small_probcut_beta = beta + 428;
+    if tt_bound == Bound::Lower
+        && tt_depth >= depth - 4
+        && tt_score >= small_probcut_beta
+        && !is_decisive(beta)
+        && is_valid(tt_score)
+        && !is_decisive(tt_score)
+    {
+        return small_probcut_beta;
+    }
+
     let mut best_move = Move::NULL;
     let mut bound = Bound::Upper;
 
