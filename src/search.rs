@@ -955,7 +955,7 @@ fn search<NODE: NodeType>(
 
             root_move.nodes += current_nodes - initial_nodes;
 
-            if move_count == 1 || score > alpha {
+            if move_count == 1 {
                 root_move.upperbound = false;
                 root_move.lowerbound = false;
                 match score {
