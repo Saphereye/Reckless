@@ -955,7 +955,7 @@ fn search<NODE: NodeType>(
 
             root_move.nodes += current_nodes - initial_nodes;
 
-            if move_count == 1 {
+            if move_count == 1 || score > alpha {
                 root_move.upperbound = false;
                 root_move.lowerbound = false;
                 match score {
@@ -977,7 +977,7 @@ fn search<NODE: NodeType>(
                 root_move.pv.commit_full_root_pv(&td.pv_table, 1);
 
                 if move_count > 1 && td.pv_index == 0 {
-                    td.best_move_changes += 1;
+                    // td.best_move_changes += 1;
                 }
             } else {
                 root_move.score = -Score::INFINITE;
