@@ -1,6 +1,9 @@
 use std::ops::{Index, IndexMut};
 
-use crate::types::{MAX_PLY, Move, Piece, Score};
+use crate::{
+    misc::dbg_hit,
+    types::{MAX_PLY, Move, Piece, Score},
+};
 
 pub struct Stack {
     data: [StackEntry; MAX_PLY + 16],
@@ -68,13 +71,13 @@ impl Index<isize> for Stack {
 
     fn index(&self, index: isize) -> &Self::Output {
         debug_assert!(index + 8 >= 0 && index < MAX_PLY as isize + 16);
-        &self.data[(index + 8) as usize]
+        unsafe { self.data.get_unchecked((index + 8) as usize) }
     }
 }
 
 impl IndexMut<isize> for Stack {
     fn index_mut(&mut self, index: isize) -> &mut Self::Output {
         debug_assert!(index + 8 >= 0 && index < MAX_PLY as isize + 16);
-        &mut self.data[(index + 8) as usize]
+        unsafe { self.data.get_unchecked_mut((index + 8) as usize) }
     }
 }
