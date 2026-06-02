@@ -10,8 +10,8 @@ pub type PstFeature = u16;
 #[derive(Clone)]
 pub struct PstDelta {
     pub mv: Move,
-    pub piece: Piece,
-    pub captured: Piece,
+    pub piece: Option<Piece>,
+    pub captured: Option<Piece>,
 }
 
 #[derive(Clone)]
@@ -25,7 +25,7 @@ impl PstAccumulator {
     pub const fn new(parameters: &Parameters) -> Self {
         Self {
             values: Aligned::new([parameters.ft_biases.data; 2]),
-            delta: PstDelta { mv: Move::NULL, piece: Piece::None, captured: Piece::None },
+            delta: PstDelta { mv: Move::NULL, piece: None, captured: None },
             accurate: [false; 2],
         }
     }
@@ -104,6 +104,7 @@ impl PstAccumulator {
 
     pub fn update(&mut self, prev: &Self, board: &Board, king: Square, pov: Color, parameters: &Parameters) {
         let PstDelta { mv, piece, captured } = self.delta;
+        let piece = piece.expect("Update must have a piece");
 
         let resulting_piece = if mv.is_promotion() { mv.promo_piece_type() } else { piece.piece_type() };
 
@@ -128,7 +129,8 @@ impl PstAccumulator {
             | MoveKind::PromotionCaptureB
             | MoveKind::PromotionCaptureR
             | MoveKind::PromotionCaptureQ => {
-                let sub2 = pst_index(!piece.color(), captured.piece_type(), mv.to(), king, pov);
+                let sub2 =
+                    pst_index(!piece.color(), captured.expect("Move kind is capture").piece_type(), mv.to(), king, pov);
                 self.apply_delta(prev, [add1], [sub1, sub2], pov, parameters);
             }
             _ => self.apply_delta(prev, [add1], [sub1], pov, parameters),

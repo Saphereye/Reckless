@@ -5,7 +5,7 @@ use std::{
 
 use super::Color;
 
-#[derive(Copy, Clone, Default, Eq, PartialEq, Debug)]
+#[derive(Copy, Clone, Eq, PartialEq, Debug)]
 #[repr(u8)]
 pub enum Piece {
     WhitePawn,
@@ -20,8 +20,6 @@ pub enum Piece {
     BlackQueen,
     WhiteKing,
     BlackKing,
-    #[default]
-    None,
 }
 
 impl Piece {
@@ -91,7 +89,6 @@ impl TryInto<char> for Piece {
             Self::BlackQueen => 'q',
             Self::WhiteKing => 'K',
             Self::BlackKing => 'k',
-            Self::None => return Err(()),
         };
         Ok(c)
     }
@@ -125,7 +122,6 @@ pub enum PieceType {
     Rook,
     Queen,
     King,
-    None,
 }
 
 impl PieceType {
@@ -143,7 +139,6 @@ impl PieceType {
             Self::Rook => 679,
             Self::Queen => 1242,
             Self::King => 0,
-            Self::None => 0,
         }
     }
 }

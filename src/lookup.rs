@@ -78,7 +78,6 @@ pub fn attacks(piece: Piece, square: Square, occupancies: Bitboard) -> Bitboard 
         PieceType::Rook => rook_attacks(square, occupancies),
         PieceType::Queen => queen_attacks(square, occupancies),
         PieceType::King => king_attacks(square),
-        PieceType::None => Bitboard(0),
     }
 }
 

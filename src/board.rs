@@ -31,7 +31,7 @@ struct InternalState {
     material: i32,
     plies_from_null: usize,
     repetition: i32,
-    captured: Piece,
+    captured: Option<Piece>,
     piece_threats: [Bitboard; PieceType::NUM],
     all_threats: Bitboard,
     pinned: [Bitboard; Color::NUM],
@@ -44,7 +44,7 @@ struct InternalState {
 pub struct Board {
     pieces: [Bitboard; PieceType::NUM],
     colors: [Bitboard; Color::NUM],
-    mailbox: [Piece; Square::NUM],
+    mailbox: [Option<Piece>; Square::NUM],
     state: InternalState,
     state_stack: Vec<InternalState>,
     halfmove_number: usize,
@@ -121,7 +121,7 @@ impl Board {
     }
 
     pub const fn captured_piece(&self) -> Piece {
-        self.state.captured
+        self.state.captured.expect("capture_piece called with no capture")
     }
 
     pub const fn en_passant(&self) -> Square {
@@ -180,16 +180,16 @@ impl Board {
         self.colored_pieces(color, PieceType::King).lsb()
     }
 
-    pub fn type_on(&self, square: Square) -> PieceType {
-        self.mailbox[square].piece_type()
+    pub fn type_on(&self, square: Square) -> Option<PieceType> {
+        self.mailbox[square].map(|p| p.piece_type())
     }
 
-    pub fn piece_on(&self, square: Square) -> Piece {
+    pub fn piece_on(&self, square: Square) -> Option<Piece> {
         self.mailbox[square]
     }
 
     pub fn moved_piece(&self, mv: Move) -> Piece {
-        self.mailbox[mv.from()]
+        self.mailbox[mv.from()].expect("Moved piece is expected to exist")
     }
 
     pub const fn set_frc(&mut self, frc: bool) {
@@ -197,15 +197,15 @@ impl Board {
     }
 
     pub fn add_piece(&mut self, piece: Piece, square: Square) {
-        self.mailbox[square] = piece;
+        self.mailbox[square] = Some(piece);
         self.colors[piece.color()].set(square);
         self.pieces[piece.piece_type()].set(square);
         self.update_hash(piece, square);
     }
 
     pub fn remove_piece(&mut self, square: Square) -> Piece {
-        let piece = self.mailbox[square];
-        self.mailbox[square] = Piece::None;
+        let piece = self.mailbox[square].expect("Called remove piece on empty square");
+        self.mailbox[square] = None;
         self.colors[piece.color()].clear(square);
         self.pieces[piece.piece_type()].clear(square);
         self.update_hash(piece, square);
@@ -559,7 +559,7 @@ impl Default for Board {
             state: InternalState::default(),
             pieces: [Bitboard::default(); PieceType::NUM],
             colors: [Bitboard::default(); Color::NUM],
-            mailbox: [Piece::None; Square::NUM],
+            mailbox: [None; Square::NUM],
             state_stack: Vec::with_capacity(2048),
             halfmove_number: 0,
             castling_rights: [0b1111; Square::NUM],

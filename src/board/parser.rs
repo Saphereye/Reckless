@@ -123,7 +123,7 @@ impl Board {
 
             for file in 0..8 {
                 let piece = self.piece_on(Square::from_rank_file(rank, file));
-                if piece == Piece::None {
+                if piece.is_none() {
                     empty_count += 1;
                     continue;
                 }
@@ -132,7 +132,7 @@ impl Board {
                     fen.push_str(&empty_count.to_string());
                     empty_count = 0;
                 }
-                fen.push_str(&piece.to_string());
+                fen.push_str(&piece.unwrap().to_string());
             }
 
             if empty_count > 0 {

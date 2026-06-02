@@ -216,11 +216,11 @@ impl Network {
 
             let delta = &self.pst_stack[i].delta;
 
-            let from = delta.mv.from().relative_to(delta.piece.color());
-            let to = delta.mv.to().relative_to(delta.piece.color());
+            let from = delta.mv.from().relative_to(delta.piece?.color());
+            let to = delta.mv.to().relative_to(delta.piece?.color());
 
-            if delta.piece.piece_type() == PieceType::King
-                && delta.piece.color() == pov
+            if delta.piece?.piece_type() == PieceType::King
+                && delta.piece?.color() == pov
                 && (from.is_kingside() != to.is_kingside() || INPUT_BUCKETS_LAYOUT[from] != INPUT_BUCKETS_LAYOUT[to])
             {
                 return None;
@@ -287,9 +287,11 @@ impl Network {
     }
 
     pub fn piece_contribution(&mut self, board: &Board, sq: Square) -> Option<i32> {
-        let piece = board.piece_on(sq);
+        let Some(piece) = board.piece_on(sq) else {
+            return None;
+        };
 
-        if piece == Piece::None || piece.piece_type() == PieceType::King {
+        if piece.piece_type() == PieceType::King {
             return None;
         }
 

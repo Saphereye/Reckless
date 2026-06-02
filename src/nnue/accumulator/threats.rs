@@ -77,11 +77,11 @@ impl ThreatAccumulator {
         let mut adds = ArrayVec::<usize, 8196>::new();
 
         for square in board.occupancies() {
-            let piece = board.piece_on(square);
+            let piece = board.piece_on(square).expect("Occupied square must have a piece");
             let threats = attacks(piece, square, board.occupancies()) & board.occupancies();
 
             for target in threats {
-                let attacked = board.piece_on(target);
+                let attacked = board.piece_on(target).expect("Attacked piece must exist");
                 let mirrored = king.is_kingside();
 
                 let index = threat_index(piece, square, attacked, target, mirrored, pov);

@@ -10,7 +10,7 @@ use crate::{
     time::{Limits, TimeManager},
     tools,
     transposition::DEFAULT_TT_SIZE,
-    types::{Color, MAX_MOVES, Move, Piece, Score, Square, is_decisive, is_loss, is_win},
+    types::{Color, MAX_MOVES, Move, Score, Square, is_decisive, is_loss, is_win},
 };
 
 #[derive(Copy, Clone, PartialEq, Eq)]
@@ -338,7 +338,7 @@ fn eval(td: &mut ThreadData, board: &Board) {
         for file in 0..8 {
             let sq = Square::from_rank_file(rank, file);
             let piece = board.piece_on(sq);
-            let piece_str = if piece == Piece::None { " ".to_string() } else { piece.to_string() };
+            let piece_str = if piece == None { " ".to_string() } else { piece.unwrap().to_string() };
             print!("  {piece_str:^3}  |");
         }
         println!();

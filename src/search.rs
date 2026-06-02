@@ -545,7 +545,7 @@ fn search<NODE: NodeType>(
         && !is_win(estimated_score)
         && !(tt_bound == Bound::Lower
             && tt_move.is_capture()
-            && td.board.piece_on(tt_move.to()).value() >= PieceType::Knight.value())
+            && td.board.piece_on(tt_move.to()).expect("Move is a capture").value() >= PieceType::Knight.value())
     {
         debug_assert_ne!(td.stack[ply - 1].mv, Move::NULL);
 
@@ -554,7 +554,7 @@ fn search<NODE: NodeType>(
 
         td.stack[ply].conthist = td.stack.sentinel().conthist;
         td.stack[ply].contcorrhist = td.stack.sentinel().contcorrhist;
-        td.stack[ply].piece = Piece::None;
+        td.stack[ply].piece = None;
         td.stack[ply].mv = Move::NULL;
 
         td.board.make_null_move();
@@ -732,8 +732,12 @@ fn search<NODE: NodeType>(
         let history = if is_quiet {
             td.quiet_history.get(td.board.all_threats(), stm, mv) + td.conthist(ply, 1, mv) + td.conthist(ply, 2, mv)
         } else {
-            let captured_type = td.board.type_on(mv.to());
-            td.noisy_history.get(td.board.all_threats(), td.board.moved_piece(mv), mv.to(), captured_type)
+            td.noisy_history.get(
+                td.board.all_threats(),
+                td.board.moved_piece(mv),
+                mv.to(),
+                td.board.type_on(mv.to()).expect("Capture square must have a type"),
+            )
         };
 
         if !NODE::ROOT && !is_loss(best_score) {
@@ -1033,35 +1037,31 @@ fn search<NODE: NodeType>(
         let cont_bonus = (107 * depth).min(1051) - 64 - 45 * cut_node as i32;
         let cont_malus = (399 * depth).min(933) - 53 - 17 * quiet_moves.len() as i32;
 
+        let moved_piece = td.board.moved_piece(best_move);
+
         if best_move.is_noisy() {
             td.noisy_history.update(
                 td.board.all_threats(),
-                td.board.moved_piece(best_move),
+                moved_piece,
                 best_move.to(),
-                td.board.type_on(best_move.to()),
+                td.board.type_on(best_move.to()).expect("Capture square must have a type"),
                 noisy_bonus,
             );
         } else {
             td.quiet_history.update(td.board.all_threats(), stm, best_move, quiet_bonus);
-            update_continuation_histories(td, ply, td.board.moved_piece(best_move), best_move.to(), cont_bonus);
+            update_continuation_histories(td, ply, moved_piece, best_move.to(), cont_bonus);
 
             for (i, &mv) in quiet_moves.iter().enumerate() {
                 let denom = 1024 + 45 * i as i32;
                 let scale = 1024_i32 * 1024 / (denom * denom / 1024);
                 td.quiet_history.update(td.board.all_threats(), stm, mv, -quiet_malus * scale / 1024);
-                update_continuation_histories(td, ply, td.board.moved_piece(mv), mv.to(), -cont_malus * scale / 1024);
+                update_continuation_histories(td, ply, moved_piece, mv.to(), -cont_malus * scale / 1024);
             }
         }
 
         for &mv in noisy_moves.iter() {
-            let captured_type = td.board.type_on(mv.to());
-            td.noisy_history.update(
-                td.board.all_threats(),
-                td.board.moved_piece(mv),
-                mv.to(),
-                captured_type,
-                -noisy_malus,
-            );
+            let captured_type = td.board.type_on(mv.to()).expect("Capture square must have a type");
+            td.noisy_history.update(td.board.all_threats(), moved_piece, mv.to(), captured_type, -noisy_malus);
         }
 
         if !NODE::ROOT && td.stack[ply - 1].mv.is_quiet() && td.stack[ply - 1].move_count < 2 {

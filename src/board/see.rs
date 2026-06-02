@@ -21,7 +21,11 @@ impl super::Board {
         }
 
         // In the worst case, we lose a piece, but still end up with a non-negative balance
-        balance -= if mv.is_promotion() { mv.promo_piece_type().value() } else { self.piece_on(mv.from()).value() };
+        balance -= if mv.is_promotion() {
+            mv.promo_piece_type().value()
+        } else {
+            self.piece_on(mv.from()).expect("From square must be occupied").value()
+        };
 
         if balance >= 0 {
             return true;
@@ -90,7 +94,7 @@ impl super::Board {
 
     fn move_value(&self, mv: Move) -> i32 {
         let capture = self.type_on(mv.capture_sq());
-        let mut value = capture.value();
+        let mut value = capture.expect("Capture must exist").value();
 
         if mv.is_promotion() {
             value += mv.promo_piece_type().value() - PieceType::Pawn.value()

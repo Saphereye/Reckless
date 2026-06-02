@@ -18,7 +18,7 @@ impl Board {
     pub fn make_null_move(&mut self) {
         self.increment_stack();
         self.state.plies_from_null = 0;
-        self.state.captured = Piece::None;
+        self.state.captured = None;
         self.update_threats();
     }
 
@@ -33,7 +33,7 @@ impl Board {
     pub fn make_move<T: BoardObserver>(&mut self, mv: Move, observer: &mut T) {
         let from = mv.from();
         let to = mv.to();
-        let piece = self.piece_on(from);
+        let piece = self.piece_on(from).expect("Piece is expected to exist");
         let stm = self.side_to_move();
 
         self.increment_stack();
@@ -59,7 +59,7 @@ impl Board {
 
             self.add_piece(rook, rook_to);
             observer.on_piece_change(self, rook, rook_to, true);
-        } else if captured != Piece::None {
+        } else if captured.is_some() {
             self.remove_piece(from);
             observer.on_piece_change(self, piece, from, false);
 
