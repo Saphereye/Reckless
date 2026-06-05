@@ -706,7 +706,8 @@ fn search<NODE: NodeType>(
         // Multi-Cut
         else if singular_score >= beta {
             if is_decisive(singular_score) {
-                return singular_score;
+                let deficit = depth - singular_depth;
+                return if singular_score > 0 { singular_score - deficit } else { singular_score + deficit };
             }
             return lerp(singular_score, beta, 0.34);
         } else if singular_score > tt_score && td.stack[ply].mv != Move::NULL {
