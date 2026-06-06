@@ -550,7 +550,7 @@ fn search<NODE: NodeType>(
     if cut_node
         && !in_check
         && !excluded
-        && tt_bound != Bound::Upper
+        && !(tt_depth >= depth && tt_bound == Bound::Upper && tt_score < beta)
         && !potential_singularity
         && estimated_score
             >= beta
