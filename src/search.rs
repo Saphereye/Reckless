@@ -891,6 +891,16 @@ fn search<NODE: NodeType>(
                 reduction += 136;
             }
 
+            let is_knight_fork = is_quiet && td.stack[ply].piece.piece_type() == PieceType::Knight && {
+                let attacked = crate::lookup::knight_attacks(mv.to()) & td.board.colors(!stm);
+                let non_pawn_attacked = attacked & !td.board.colored_pieces(!stm, PieceType::Pawn);
+                non_pawn_attacked.popcount() >= 2
+            };
+
+            if is_knight_fork {
+                reduction -= 1024;
+            }
+
             reduction += ((td.nodes() + td.id as u64 * 27) % 128) as i32 - 59;
 
             let reduced_depth = (new_depth - reduction / 1024).clamp(1, new_depth + 2) + 2 * NODE::PV as i32;
