@@ -820,6 +820,10 @@ fn search<NODE: NodeType>(
                 continue;
             }
 
+            if in_check && is_quiet && depth <= 3 && move_count >= 3 && history < -2048 * depth {
+                continue;
+            }
+
             // Static Exchange Evaluation Pruning (SEE Pruning)
             let threshold = if is_quiet {
                 (-12 * depth * depth + 56 * depth - 27 * history / 1024 + 27).min(0)
