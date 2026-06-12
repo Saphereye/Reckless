@@ -778,7 +778,9 @@ fn search<NODE: NodeType>(
                 && is_quiet
                 && !is_win(beta)
                 && move_count as i32
-                    >= (2818 + 78 * improvement / 16 + 1351 * depth * depth + 74 * history / 1024) / 1024
+                    >= (2818 + 78 * improvement / 16 + 1351 * depth * depth + 74 * history / 1024
+                        + 555 * correction_value.abs() / 1024)
+                        / 1024
             {
                 skip_quiets = true;
                 continue;
