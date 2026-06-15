@@ -769,6 +769,7 @@ fn search<NODE: NodeType>(
         } else {
             let captured_type = td.board.type_on(mv.to());
             td.noisy_history.get(td.board.all_threats(), td.board.moved_piece(mv), mv.to(), captured_type)
+                + td.conthist(ply, 1, mv)
         };
 
         if !NODE::ROOT && !is_loss(best_score) {
