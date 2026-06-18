@@ -370,9 +370,20 @@ pub struct Parameters {
 impl Parameters {
     fn embedded() -> &'static Self {
         static EMBEDDED: Parameters = unsafe { std::mem::transmute(*include_bytes!(env!("MODEL"))) };
+        #[cfg(target_os = "linux")]
+        {
+            use std::sync::Once;
+            static MADVISE: Once = Once::new();
+            MADVISE.call_once(|| unsafe {
+                libc::madvise(
+                    std::ptr::addr_of!(EMBEDDED) as *mut _,
+                    std::mem::size_of::<Self>(),
+                    libc::MADV_HUGEPAGE,
+                );
+            });
+        }
         &EMBEDDED
     }
-
 }
 
 #[derive(Clone)]
@@ -382,11 +393,16 @@ pub struct ParametersHandle {
 
 #[derive(Clone)]
 enum ParametersStorage {
+    Embedded(&'static Parameters),
     Owned(Arc<HugeBox<Parameters>>),
 }
 
 impl ParametersHandle {
-    fn new() -> Self {
+    fn embedded() -> Self {
+        Self { inner: ParametersStorage::Embedded(Parameters::embedded()) }
+    }
+
+    fn owned() -> Self {
         let mut huge = HugeBox::new_zeroed();
         unsafe { std::ptr::copy_nonoverlapping(Parameters::embedded(), &mut *huge, 1) };
         Self { inner: ParametersStorage::Owned(Arc::new(huge)) }
@@ -398,6 +414,7 @@ impl std::ops::Deref for ParametersHandle {
 
     fn deref(&self) -> &Self::Target {
         match &self.inner {
+            ParametersStorage::Embedded(p) => p,
             ParametersStorage::Owned(p) => p,
         }
     }
@@ -405,7 +422,11 @@ impl std::ops::Deref for ParametersHandle {
 
 impl NumaReplicable for ParametersHandle {
     fn allocate() -> Arc<Self> {
-        Arc::new(Self::new())
+        Arc::new(Self::owned())
+    }
+
+    fn allocate_shared() -> Option<Arc<Self>> {
+        Arc::new(Self::embedded()).into()
     }
 }
 
