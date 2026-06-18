@@ -5,6 +5,7 @@ pub use accumulator::threats::initialize;
 use std::sync::Arc;
 
 use crate::{
+    alloc::HugeBox,
     board::{Board, BoardObserver},
     nnue::accumulator::{
         AccumulatorCache, PstAccumulator, ThreatAccumulator,
@@ -372,16 +373,6 @@ impl Parameters {
         &EMBEDDED
     }
 
-    fn allocate_owned() -> Arc<Self> {
-        let mut boxed = Box::<std::mem::MaybeUninit<Self>>::new(std::mem::MaybeUninit::uninit());
-        let ptr = boxed.as_mut_ptr();
-        std::mem::forget(boxed);
-
-        unsafe {
-            std::ptr::copy_nonoverlapping(Self::embedded() as *const Self, ptr, 1);
-            Arc::from(Box::from_raw(ptr))
-        }
-    }
 }
 
 #[derive(Clone)]
@@ -391,17 +382,14 @@ pub struct ParametersHandle {
 
 #[derive(Clone)]
 enum ParametersStorage {
-    Embedded(&'static Parameters),
-    Owned(Arc<Parameters>),
+    Owned(Arc<HugeBox<Parameters>>),
 }
 
 impl ParametersHandle {
-    fn embedded() -> Self {
-        Self { inner: ParametersStorage::Embedded(Parameters::embedded()) }
-    }
-
-    const fn owned(parameters: Arc<Parameters>) -> Self {
-        Self { inner: ParametersStorage::Owned(parameters) }
+    fn new() -> Self {
+        let mut huge = HugeBox::new_zeroed();
+        unsafe { std::ptr::copy_nonoverlapping(Parameters::embedded(), &mut *huge, 1) };
+        Self { inner: ParametersStorage::Owned(Arc::new(huge)) }
     }
 }
 
@@ -410,19 +398,14 @@ impl std::ops::Deref for ParametersHandle {
 
     fn deref(&self) -> &Self::Target {
         match &self.inner {
-            ParametersStorage::Embedded(parameters) => parameters,
-            ParametersStorage::Owned(parameters) => parameters.as_ref(),
+            ParametersStorage::Owned(p) => p,
         }
     }
 }
 
 impl NumaReplicable for ParametersHandle {
     fn allocate() -> Arc<Self> {
-        Arc::new(Self::owned(Parameters::allocate_owned()))
-    }
-
-    fn allocate_shared() -> Option<Arc<Self>> {
-        Arc::new(Self::embedded()).into()
+        Arc::new(Self::new())
     }
 }
 

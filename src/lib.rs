@@ -4,6 +4,7 @@
 #![warn(clippy::redundant_clone)]
 #![cfg_attr(target_arch = "wasm32", allow(dead_code, unused_imports))]
 
+mod alloc;
 mod board;
 mod evaluation;
 mod history;
