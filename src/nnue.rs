@@ -171,13 +171,42 @@ impl Network {
 
         self.index += 1;
 
+        let piece = board.piece_on(mv.from());
+
         self.pst_stack[self.index].accurate = [false; 2];
         self.pst_stack[self.index].delta.mv = mv;
-        self.pst_stack[self.index].delta.piece = board.piece_on(mv.from());
+        self.pst_stack[self.index].delta.piece = piece;
         self.pst_stack[self.index].delta.captured = board.piece_on(mv.to());
 
         self.threat_stack[self.index].accurate = [false; 2];
         self.threat_stack[self.index].delta.clear();
+
+        #[cfg(target_arch = "x86_64")]
+        if piece.piece_type() != PieceType::King {
+            use std::arch::x86_64::{_MM_HINT_T1, _mm_prefetch};
+            let parameters: &Parameters = self.parameters.as_ref();
+            let resulting_pt = if mv.is_promotion() { mv.promo_piece_type() } else { piece.piece_type() };
+
+            for &pov in &[Color::White, Color::Black] {
+                let king = board.king_square(pov);
+                let flip = (7 * king.is_kingside() as u8) ^ (56 * pov as u8);
+                let base = INPUT_BUCKETS_LAYOUT[king ^ flip] as usize * 768 + 384 * (piece.color() != pov) as usize;
+
+                unsafe {
+                    _mm_prefetch::<_MM_HINT_T1>(
+                        parameters.ft_piece_weights[base + 64 * resulting_pt as usize + (mv.to() ^ flip) as usize]
+                            .as_ptr()
+                            .cast(),
+                    );
+                    _mm_prefetch::<_MM_HINT_T1>(
+                        parameters.ft_piece_weights
+                            [base + 64 * piece.piece_type() as usize + (mv.from() ^ flip) as usize]
+                            .as_ptr()
+                            .cast(),
+                    );
+                }
+            }
+        }
     }
 
     pub const fn pop(&mut self) {
