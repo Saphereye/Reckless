@@ -354,6 +354,8 @@ impl BoardObserver for Network {
     }
 }
 
+static EMBEDDED: Parameters = unsafe { std::mem::transmute(*include_bytes!(env!("MODEL"))) };
+
 #[repr(C)]
 pub struct Parameters {
     ft_threat_weights: Aligned<[[i8; L1_SIZE]; 66864]>,
@@ -369,11 +371,10 @@ pub struct Parameters {
 
 impl Parameters {
     fn embedded() -> &'static Self {
-        static EMBEDDED: Parameters = unsafe { std::mem::transmute(*include_bytes!(env!("MODEL"))) };
         static HANDLE: std::sync::OnceLock<&'static Parameters> = std::sync::OnceLock::new();
         *HANDLE.get_or_init(|| {
             #[cfg(all(target_os = "linux", not(target_os = "android")))]
-            if let Some(p) = Self::try_shm(&EMBEDDED) {
+            if let Some(p) = Self::in_huge_pages() {
                 return p;
             }
             &EMBEDDED
@@ -381,96 +382,14 @@ impl Parameters {
     }
 
     #[cfg(all(target_os = "linux", not(target_os = "android")))]
-    fn try_shm(source: &Self) -> Option<&'static Self> {
-        use std::ffi::CString;
-        use std::sync::atomic::{AtomicU8, Ordering};
-
-        let name = {
-            let exe = std::fs::read_link("/proc/self/exe").ok()?;
-            let mut hash = 0xcbf29ce484222325u64;
-            for &b in exe.to_string_lossy().as_bytes() {
-                hash ^= b as u64;
-                hash = hash.wrapping_mul(0x100000001b3u64);
-            }
-            hash ^= std::mem::size_of::<Self>() as u64;
-            CString::new(format!("/reckless_{:016x}", hash)).ok()?
-        };
-
-        // Layout: [AtomicU8 initialized flag + 63 bytes padding][Parameters]
-        const HEADER: usize = 64;
-        let total = HEADER + std::mem::size_of::<Self>();
-
-        unsafe {
-            let fd = libc::shm_open(name.as_ptr(), libc::O_CREAT | libc::O_EXCL | libc::O_RDWR, 0o666);
-
-            if fd >= 0 {
-                if libc::ftruncate(fd, total as libc::off_t) == -1 {
-                    libc::close(fd);
-                    libc::shm_unlink(name.as_ptr());
-                    return None;
-                }
-
-                let ptr = libc::mmap(
-                    std::ptr::null_mut(),
-                    total,
-                    libc::PROT_READ | libc::PROT_WRITE,
-                    libc::MAP_SHARED,
-                    fd,
-                    0,
-                );
-                libc::close(fd);
-
-                if ptr == libc::MAP_FAILED {
-                    libc::shm_unlink(name.as_ptr());
-                    return None;
-                }
-
-                libc::madvise(ptr, total, libc::MADV_HUGEPAGE);
-                libc::madvise(ptr, total, 23); // MADV_POPULATE_WRITE (Linux 5.14+), no-op if unsupported
-
-                let flag = ptr as *mut AtomicU8;
-                (*flag).store(0, Ordering::Relaxed);
-
-                let params_ptr = (ptr as *mut u8).add(HEADER) as *mut Self;
-                std::ptr::copy_nonoverlapping(source as *const Self, params_ptr, 1);
-
-                (*flag).store(1, Ordering::Release);
-
-                Some(&*params_ptr)
-            } else {
-                let fd = libc::shm_open(name.as_ptr(), libc::O_RDONLY, 0o666);
-                if fd < 0 {
-                    return None;
-                }
-
-                let mut stat: libc::stat = std::mem::zeroed();
-                if libc::fstat(fd, &mut stat) == -1 || (stat.st_size as usize) < total {
-                    libc::close(fd);
-                    return None;
-                }
-
-                let ptr = libc::mmap(std::ptr::null_mut(), total, libc::PROT_READ, libc::MAP_SHARED, fd, 0);
-                libc::close(fd);
-
-                if ptr == libc::MAP_FAILED {
-                    return None;
-                }
-
-                libc::madvise(ptr, total, libc::MADV_HUGEPAGE);
-
-                let flag = ptr as *const AtomicU8;
-                for _ in 0..40 {
-                    if (*flag).load(Ordering::Acquire) == 1 {
-                        let params_ptr = (ptr as *const u8).add(HEADER) as *const Self;
-                        return Some(&*params_ptr);
-                    }
-                    std::thread::sleep(std::time::Duration::from_millis(5));
-                }
-
-                libc::munmap(ptr as *mut _, total);
-                None
-            }
-        }
+    fn in_huge_pages() -> Option<&'static Self> {
+        static HANDLE: std::sync::OnceLock<HugeBox<Parameters>> = std::sync::OnceLock::new();
+        let h = HANDLE.get_or_init(|| {
+            let mut h = HugeBox::new_zeroed();
+            unsafe { std::ptr::copy_nonoverlapping(&EMBEDDED, &mut *h, 1) };
+            h
+        });
+        Some(h)
     }
 }
 
@@ -492,7 +411,7 @@ impl ParametersHandle {
 
     fn owned() -> Self {
         let mut huge = HugeBox::new_zeroed();
-        unsafe { std::ptr::copy_nonoverlapping(Parameters::embedded(), &mut *huge, 1) };
+        unsafe { std::ptr::copy_nonoverlapping(&EMBEDDED, &mut *huge, 1) };
         Self { inner: ParametersStorage::Owned(Arc::new(huge)) }
     }
 }

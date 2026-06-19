@@ -49,6 +49,8 @@ impl<T> std::ops::DerefMut for HugeBox<T> {
 
 impl<T> Drop for HugeBox<T> {
     fn drop(&mut self) {
+        unsafe { std::ptr::drop_in_place(self.ptr.as_ptr()) };
+
         #[cfg(target_os = "linux")]
         unsafe {
             let size = std::mem::size_of::<T>();
