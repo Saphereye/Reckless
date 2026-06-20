@@ -20,8 +20,7 @@ pub struct MovePicker {
     tt_move: Move,
     threshold: Option<i32>,
     stage: Stage,
-    bad_noisy: ArrayVec<Move, MAX_MOVES>,
-    bad_noisy_idx: usize,
+    bad_noisy: ArrayVec<MoveEntry, MAX_MOVES>,
     noisy_count: usize,
 }
 
@@ -33,7 +32,6 @@ impl MovePicker {
             threshold,
             stage: if tt_move.is_present() { Stage::HashMove } else { Stage::GenerateNoisy },
             bad_noisy: ArrayVec::new(),
-            bad_noisy_idx: 0,
             noisy_count: 0,
         }
     }
@@ -63,7 +61,7 @@ impl MovePicker {
                 let entry = self.get_best_entry();
                 let threshold = self.threshold.unwrap_or_else(|| -entry.score / 47 + 116);
                 if (self.tt_move.is_quiet() && self.noisy_count > 2) || !td.board.see(entry.mv, threshold) {
-                    self.bad_noisy.push(entry.mv);
+                    self.bad_noisy.push(entry);
                     continue;
                 }
 
@@ -97,10 +95,16 @@ impl MovePicker {
         }
 
         // Stage::BadNoisy
-        if self.bad_noisy_idx < self.bad_noisy.len() {
-            let mv = self.bad_noisy[self.bad_noisy_idx];
-            self.bad_noisy_idx += 1;
-            return Some(mv);
+        if !self.bad_noisy.is_empty() {
+            let mut best_idx = 0;
+            let mut best_score = i32::MIN;
+            for i in 0..self.bad_noisy.len() {
+                if self.bad_noisy[i].score > best_score {
+                    best_idx = i;
+                    best_score = self.bad_noisy[i].score;
+                }
+            }
+            return Some(self.bad_noisy.swap_remove(best_idx).mv);
         }
 
         None
