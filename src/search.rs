@@ -769,6 +769,8 @@ fn search<NODE: NodeType>(
         } else {
             let captured_type = td.board.type_on(mv.to());
             td.noisy_history.get(td.board.all_threats(), td.board.moved_piece(mv), mv.to(), captured_type)
+                + td.conthist(ply, 1, mv)
+                + td.conthist(ply, 2, mv)
         };
 
         if !NODE::ROOT && !is_loss(best_score) {
@@ -816,7 +818,7 @@ fn search<NODE: NodeType>(
             }
 
             // History Pruning (HP)
-            if !in_check && is_quiet && depth < 5 && history < -depth * (948 - 200 * improving as i32) {
+            if !in_check && is_quiet && depth < 5 && history < -948 * depth {
                 continue;
             }
 
