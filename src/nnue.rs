@@ -417,7 +417,7 @@ impl std::ops::Deref for ParametersHandle {
 }
 
 impl NumaReplicable for ParametersHandle {
-    fn allocate() -> Arc<Self> {
+    fn allocate(_thread_count: usize) -> Arc<Self> {
         Arc::new(Self::owned(Parameters::allocate_owned()))
     }
 

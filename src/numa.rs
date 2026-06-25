@@ -14,7 +14,7 @@ use std::{
 };
 
 pub trait NumaReplicable: Send + Sync + 'static {
-    fn allocate() -> Arc<Self>;
+    fn allocate(thread_count: usize) -> Arc<Self>;
 
     fn allocate_shared() -> Option<Arc<Self>> {
         None
@@ -350,12 +350,13 @@ impl<T: NumaReplicable> NumaReplicated<T> {
 
     fn replicate_instances(&self) {
         let cfg = self.ctx.get_numa_config();
+        let thread_count = self.ctx.get_thread_count();
         let mut instances = Vec::<Arc<T>>::new();
 
         let allocate_on_node = |node| {
             let (tx, rx) = mpsc::channel();
             cfg.execute_on_numa_node(node, move || {
-                tx.send(T::allocate()).expect("failed to send NUMA replicated instance");
+                tx.send(T::allocate(thread_count)).expect("failed to send NUMA replicated instance");
             });
             rx.recv().expect("failed to receive NUMA replicated instance")
         };

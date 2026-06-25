@@ -131,39 +131,40 @@ impl Default for NoisyHistory {
 
 pub struct CorrectionHistory {
     // [bucket][side_to_move][key]
-    entries: Box<[[[AtomicI16; Self::SIZE]; 2]; 16]>,
+    entries: Box<[AtomicI16]>,
+    mask: usize,
 }
 
 impl CorrectionHistory {
     const MAX_HISTORY: i32 = 14605;
 
     const SIZE: usize = 65536;
-    const MASK: usize = Self::SIZE - 1;
+
+    pub fn scaled(thread_count: usize) -> Self {
+        let size = Self::SIZE * thread_count.next_power_of_two();
+        let entries = (0..16 * 2 * size).map(|_| AtomicI16::new(0)).collect();
+        Self { entries, mask: size - 1 }
+    }
+
+    fn index(&self, stm: Color, key: u64, bucket: usize) -> usize {
+        (bucket * 2 + stm as usize) * (self.mask + 1) + (key as usize & self.mask)
+    }
 
     pub fn get(&self, stm: Color, key: u64, bucket: usize) -> i32 {
-        self.entries[bucket][stm][key as usize & Self::MASK].load(Ordering::Relaxed) as i32
+        self.entries[self.index(stm, key, bucket)].load(Ordering::Relaxed) as i32
     }
 
     pub fn update(&self, stm: Color, key: u64, bucket: usize, bonus: i32) {
-        let current = self.entries[bucket][stm][key as usize & Self::MASK].load(Ordering::Relaxed) as i32;
+        let idx = self.index(stm, key, bucket);
+        let current = self.entries[idx].load(Ordering::Relaxed) as i32;
         let new = current + bonus - bonus.abs() * current / Self::MAX_HISTORY;
-        self.entries[bucket][stm][key as usize & Self::MASK].store(new as i16, Ordering::Relaxed);
+        self.entries[idx].store(new as i16, Ordering::Relaxed);
     }
 
     pub fn clear(&self) {
-        for bucket in self.entries.iter() {
-            for entries in bucket.iter() {
-                for entry in entries {
-                    entry.store(0, Ordering::Relaxed);
-                }
-            }
+        for entry in self.entries.iter() {
+            entry.store(0, Ordering::Relaxed);
         }
-    }
-}
-
-impl Default for CorrectionHistory {
-    fn default() -> Self {
-        Self { entries: zeroed_box() }
     }
 }
 

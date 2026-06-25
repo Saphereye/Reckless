@@ -139,15 +139,23 @@ impl Default for Status {
     }
 }
 
-#[derive(Default)]
 pub struct SharedCorrectionHistory {
     pub pawn: CorrectionHistory,
     pub non_pawn: [CorrectionHistory; 2],
 }
 
+impl SharedCorrectionHistory {
+    fn new(thread_count: usize) -> Self {
+        Self {
+            pawn: CorrectionHistory::scaled(thread_count),
+            non_pawn: [CorrectionHistory::scaled(thread_count), CorrectionHistory::scaled(thread_count)],
+        }
+    }
+}
+
 impl NumaReplicable for SharedCorrectionHistory {
-    fn allocate() -> Arc<Self> {
-        Arc::new(Self::default())
+    fn allocate(thread_count: usize) -> Arc<Self> {
+        Arc::new(Self::new(thread_count))
     }
 }
 
