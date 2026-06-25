@@ -763,6 +763,9 @@ fn search<NODE: NodeType>(
 
         let is_quiet = mv.is_quiet();
         let is_direct_check = td.board.is_direct_check(mv);
+        let is_escape = is_quiet
+            && (td.board.all_threats() & td.board.colors(stm) & !td.board.pieces(PieceType::Pawn)).contains(mv.from())
+            && !td.board.all_threats().contains(mv.to());
 
         let history = if is_quiet {
             td.quiet_history.get(td.board.all_threats(), stm, mv) + td.conthist(ply, 1, mv) + td.conthist(ply, 2, mv)
@@ -816,7 +819,7 @@ fn search<NODE: NodeType>(
             }
 
             // History Pruning (HP)
-            if !in_check && is_quiet && depth < 5 && history < -948 * depth {
+            if !in_check && is_quiet && depth < 5 && history < -948 * depth && !is_escape {
                 continue;
             }
 
