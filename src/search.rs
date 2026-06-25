@@ -851,6 +851,9 @@ fn search<NODE: NodeType>(
             reduction += 464 * (is_valid(tt_score) && tt_score <= alpha) as i32;
             reduction += 326 * (is_valid(tt_score) && tt_depth < depth) as i32;
 
+            reduction -= 162
+                * (td.board.all_threats() & td.board.colors(stm) & !td.board.pieces(PieceType::Pawn)).popcount() as i32;
+
             if is_quiet {
                 reduction += 2171;
                 reduction -= 179 * history / 1024;
