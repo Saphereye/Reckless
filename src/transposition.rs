@@ -266,6 +266,21 @@ impl TranspositionTable {
         cluster.set_key(replacement_index, key);
     }
 
+    pub fn penalize(&self, hash: u64, penalty: u8) {
+        let cluster = {
+            let index = index(hash, self.len());
+            unsafe { &mut *self.ptr().add(index) }
+        };
+
+        let key = verification_key(hash);
+        let index = cluster.lookup_key(key);
+
+        if index < cluster.entries.len() {
+            let entry = &mut cluster.entries[index];
+            entry.offset_depth = entry.offset_depth.saturating_sub(penalty);
+        }
+    }
+
     pub fn prefetch(&self, hash: u64) {
         #[cfg(target_arch = "x86_64")]
         unsafe {

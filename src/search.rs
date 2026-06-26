@@ -403,6 +403,15 @@ fn search<NODE: NodeType>(
             if td.board.fiftymove_clock() < 90 {
                 return tt_score;
             }
+        } else if !NODE::PV
+            && !excluded
+            && tt_depth > depth - (tt_score <= beta) as i32
+            && is_valid(tt_score)
+            && tt_bound != Bound::Exact
+            && (if tt_score >= beta { tt_bound == Bound::Upper } else { tt_bound == Bound::Lower })
+            && depth > 5
+        {
+            td.shared.tt.penalize(hash, 1);
         }
     }
 
