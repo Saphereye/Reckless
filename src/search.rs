@@ -410,6 +410,7 @@ fn search<NODE: NodeType>(
             && tt_bound != Bound::Exact
             && (if tt_score >= beta { tt_bound == Bound::Upper } else { tt_bound == Bound::Lower })
             && depth > 5
+            && tt_depth <= 16
         {
             td.shared.tt.penalize(hash, 1);
         }
