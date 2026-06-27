@@ -277,7 +277,9 @@ impl TranspositionTable {
 
         if index < cluster.entries.len() {
             let entry = &mut cluster.entries[index];
-            entry.offset_depth = entry.offset_depth.saturating_sub(penalty);
+            let flags = entry.flags;
+            let aged = (flags.age() + AGE_CYCLE - (penalty & AGE_MASK)) & AGE_MASK;
+            entry.flags = Flags::new(flags.bound(), flags.tt_pv(), aged);
         }
     }
 
