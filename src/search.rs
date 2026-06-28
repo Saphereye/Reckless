@@ -512,6 +512,12 @@ fn search<NODE: NodeType>(
 
         if !tt_pv && depth >= 2 && reduction > 0 && eval_delta > 57 {
             depth -= 1;
+        } else if depth >= 15
+            && eval_delta > 2
+            && is_valid(td.stack[ply - 6].eval)
+            && eval > td.stack[ply - 6].eval + 75
+        {
+            depth -= 1;
         }
     }
 
