@@ -726,8 +726,10 @@ fn search<NODE: NodeType>(
             tt_move = Move::NULL;
         }
         // Negative Extensions
-        else if tt_score >= beta || cut_node {
+        else if tt_score >= beta {
             extension = -3;
+        } else if cut_node {
+            extension = -2;
         }
     }
     // Low Depth Singular Extensions (LDSE)
