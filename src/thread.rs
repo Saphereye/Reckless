@@ -145,6 +145,7 @@ impl Default for Status {
 pub struct SharedCorrectionHistory {
     pub pawn: CorrectionHistory,
     pub non_pawn: [CorrectionHistory; 2],
+    pub king: CorrectionHistory,
 }
 
 impl NumaReplicable for SharedCorrectionHistory {

@@ -113,6 +113,13 @@ impl Board {
         self.state.keys.non_pawn(color)
     }
 
+    pub fn king_key(&self, color: Color) -> u64 {
+        let ksq = self.king_square(color);
+        let shelter = (king_attacks(ksq) & self.colored_pieces(color, PieceType::Pawn)).popcount().min(7) as u64;
+        let threats = (king_attacks(ksq) & self.all_threats()).popcount().min(7) as u64;
+        (ksq as u64) | (shelter << 6) | (threats << 9)
+    }
+
     pub const fn pinned(&self, color: Color) -> Bitboard {
         self.state.pinned[color as usize]
     }
