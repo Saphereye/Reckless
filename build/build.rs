@@ -46,13 +46,8 @@ fn generate_syzygy_binding() {
         .flag("-O3")
         .compile("fathom");
 
-    bindgen::Builder::default()
-        .header("./deps/Fathom/tbprobe.h")
-        .layout_tests(false)
-        .generate()
-        .expect("Failed to generate Fathom bindings")
-        .write_to_file("src/bindings.rs")
-        .unwrap();
+    println!("cargo:rerun-if-changed=deps/Fathom/tbprobe.c");
+    println!("cargo:rerun-if-changed=deps/Fathom/tbprobe.h");
 }
 
 fn generate_model_env() {

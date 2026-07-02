@@ -3,4 +3,3 @@ target
 *.exe
 *.pdb
 reckless*
-bindings.rs
