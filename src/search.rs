@@ -738,6 +738,8 @@ fn search<NODE: NodeType>(
     let mut best_move = Move::NULL;
     let mut bound = Bound::Upper;
 
+    let mut last_improve_mc = 0;
+
     let mut quiet_moves = ArrayVec::<Move, 32>::new();
     let mut noisy_moves = ArrayVec::<Move, 32>::new();
 
@@ -888,6 +890,11 @@ fn search<NODE: NodeType>(
                 reduction += (496 * (margin - 185) / 128).clamp(0, 2021);
             }
 
+            if !NODE::PV {
+                let stall = move_count as i32 - last_improve_mc as i32;
+                reduction += (250 * (stall - 1)).clamp(0, 1500);
+            }
+
             if !NODE::PV && td.stack[ply - 1].reduction > reduction + 414 {
                 reduction += 136;
             }
@@ -1019,6 +1026,7 @@ fn search<NODE: NodeType>(
 
         if score > best_score {
             best_score = score;
+            last_improve_mc = move_count;
 
             if score > alpha {
                 bound = Bound::Exact;
