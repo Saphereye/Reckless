@@ -834,6 +834,8 @@ fn search<NODE: NodeType>(
 
         let initial_nodes = td.nodes();
 
+        let quiet_see_loss = is_quiet && depth >= 2 && move_count >= 2 && !td.board.see(mv, 0);
+
         make_move(td, ply, mv);
 
         let mut new_depth = depth - 1 + if move_count == 1 { extension } else { 0 };
@@ -856,6 +858,7 @@ fn search<NODE: NodeType>(
                 reduction += 2171;
                 reduction -= 179 * history / 1024;
                 reduction += 418 * ((alpha - estimated_score).clamp(-65, 91)) / 128;
+                reduction += 1024 * quiet_see_loss as i32;
             } else {
                 reduction += 1426;
                 reduction -= 130 * history / 1024;
