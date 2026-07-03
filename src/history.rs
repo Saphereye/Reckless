@@ -171,6 +171,14 @@ impl CorrectionHistory {
         self.entries[bucket][stm][key as usize & Self::MASK].load(Ordering::Relaxed) as i32
     }
 
+    pub fn prefetch(&self, stm: Color, key: u64, bucket: usize) {
+        #[cfg(target_arch = "x86_64")]
+        unsafe {
+            let addr = std::ptr::addr_of!(self.entries[bucket][stm][key as usize & Self::MASK]);
+            std::arch::x86_64::_mm_prefetch::<{ std::arch::x86_64::_MM_HINT_T0 }>(addr.cast());
+        }
+    }
+
     pub fn update(&self, stm: Color, key: u64, bucket: usize, bonus: i32) {
         let current = self.entries[bucket][stm][key as usize & Self::MASK].load(Ordering::Relaxed) as i32;
         let new = current + bonus - bonus.abs() * current / Self::MAX_HISTORY;
@@ -210,6 +218,14 @@ impl ContinuationCorrectionHistory {
 
     pub fn get(&self, subtable_ptr: *mut PieceToHistory<i16>, piece: Piece, to: Square) -> i32 {
         unsafe { (&*subtable_ptr)[piece][to] as i32 }
+    }
+
+    pub fn prefetch(&self, subtable_ptr: *mut PieceToHistory<i16>, piece: Piece, to: Square) {
+        #[cfg(target_arch = "x86_64")]
+        unsafe {
+            let addr = std::ptr::addr_of!((&*subtable_ptr)[piece][to]);
+            std::arch::x86_64::_mm_prefetch::<{ std::arch::x86_64::_MM_HINT_T0 }>(addr.cast());
+        }
     }
 
     pub fn update(&self, subtable_ptr: *mut PieceToHistory<i16>, piece: Piece, to: Square, bonus: i32) {

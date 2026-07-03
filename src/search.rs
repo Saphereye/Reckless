@@ -443,26 +443,27 @@ fn search<NODE: NodeType>(
         }
     }
 
-    let correction_value = eval_correction(td, ply);
+    prefetch_correction(td, ply);
 
     let raw_eval;
-    let eval;
+    let mut eval = Score::NONE;
 
     // Evaluation
     if in_check {
         raw_eval = Score::NONE;
-        eval = Score::NONE;
     } else if excluded {
         raw_eval = Score::NONE;
         eval = td.stack[ply].eval;
     } else if let Some(entry) = &entry {
         raw_eval = if is_valid(entry.raw_eval) { entry.raw_eval } else { td.nnue.evaluate(&td.board) };
-        eval = correct_eval(td, raw_eval, correction_value);
     } else {
         raw_eval = td.nnue.evaluate(&td.board);
-        eval = correct_eval(td, raw_eval, correction_value);
-
         td.shared.tt.write(hash, TtDepth::SOME, raw_eval, Score::NONE, Bound::None, Move::NULL, ply, tt_pv, false);
+    }
+
+    let correction_value = eval_correction(td, ply);
+    if !in_check && !excluded {
+        eval = correct_eval(td, raw_eval, correction_value);
     }
 
     // Prefer the TT entry to tighten the evaluation when its bound aligns with
@@ -1359,6 +1360,26 @@ fn qsearch<NODE: NodeType>(td: &mut ThreadData, mut alpha: i32, beta: i32, ply: 
     debug_assert!(-Score::INFINITE < best_score && best_score < Score::INFINITE);
 
     best_score
+}
+
+fn prefetch_correction(td: &ThreadData, ply: isize) {
+    let stm = td.board.side_to_move();
+    let bucket = td.board.fiftymove_clock_bucket();
+    let corrhist = td.corrhist();
+
+    corrhist.pawn.prefetch(stm, td.board.pawn_key(), bucket);
+    corrhist.non_pawn[Color::White].prefetch(stm, td.board.non_pawn_key(Color::White), bucket);
+    corrhist.non_pawn[Color::Black].prefetch(stm, td.board.non_pawn_key(Color::Black), bucket);
+    td.continuation_corrhist.prefetch(
+        td.stack[ply - 2].contcorrhist,
+        td.stack[ply - 1].piece,
+        td.stack[ply - 1].mv.to(),
+    );
+    td.continuation_corrhist.prefetch(
+        td.stack[ply - 4].contcorrhist,
+        td.stack[ply - 1].piece,
+        td.stack[ply - 1].mv.to(),
+    );
 }
 
 fn eval_correction(td: &ThreadData, ply: isize) -> i32 {
