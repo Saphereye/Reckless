@@ -105,6 +105,28 @@ impl Default for QuietHistory {
     }
 }
 
+pub struct TtMoveHistory {
+    value: i16,
+}
+
+impl TtMoveHistory {
+    const MAX_HISTORY: i32 = 8192;
+
+    pub fn get(&self) -> i32 {
+        self.value as i32
+    }
+
+    pub fn update(&mut self, bonus: i32) {
+        apply_bonus::<{ Self::MAX_HISTORY }>(&mut self.value, bonus);
+    }
+}
+
+impl Default for TtMoveHistory {
+    fn default() -> Self {
+        Self { value: 0 }
+    }
+}
+
 pub struct PawnHistory {
     // [pawn_key_bucket][piece][to]
     entries: Box<[PieceToHistory<i16>; Self::SIZE]>,

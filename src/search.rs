@@ -685,6 +685,7 @@ fn search<NODE: NodeType>(
     }
 
     // Singular Extensions (SE)
+    let tt_move_original = tt_move;
     let mut extension = 0;
     let mut singular_score = Score::NONE;
 
@@ -709,7 +710,8 @@ fn search<NODE: NodeType>(
         if singular_score < singular_beta {
             let double_margin = 195 * NODE::PV as i32 + 48 * (NODE::PV && !tt_was_pv) as i32
                 - 16 * tt_move.is_quiet() as i32
-                - 16 * correction_value.abs() / 128;
+                - 16 * correction_value.abs() / 128
+                - 1081 * td.tt_move_history.get() / 117824;
             let triple_margin = 230 * NODE::PV as i32 + 56 * (NODE::PV && !tt_was_pv) as i32
                 - 19 * tt_move.is_quiet() as i32
                 - 15 * correction_value.abs() / 128
@@ -721,6 +723,7 @@ fn search<NODE: NodeType>(
         }
         // Multi-Cut
         else if singular_score >= beta && !is_decisive(singular_score) {
+            td.tt_move_history.update(-442 - 108 * depth);
             return lerp(singular_score, beta, 0.4027);
         } else if singular_score > tt_score && td.stack[ply].mv != Move::NULL {
             tt_move = Move::NULL;
@@ -1115,6 +1118,10 @@ fn search<NODE: NodeType>(
         if current_search_count > 1 && best_move.is_quiet() && best_score >= beta {
             let bonus = (233 * depth - 86).min(1550);
             update_continuation_histories(td, ply, td.stack[ply].piece, best_move.to(), bonus);
+        }
+
+        if !NODE::PV {
+            td.tt_move_history.update(if best_move == tt_move_original { 792 } else { -779 });
         }
     }
 
