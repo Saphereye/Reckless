@@ -711,7 +711,7 @@ fn search<NODE: NodeType>(
             let double_margin = 195 * NODE::PV as i32 + 48 * (NODE::PV && !tt_was_pv) as i32
                 - 16 * tt_move.is_quiet() as i32
                 - 16 * correction_value.abs() / 128
-                - 1081 * td.tt_move_history.get() / 117824;
+                - 1081 * td.tt_move_history.get(depth) / 117824;
             let triple_margin = 230 * NODE::PV as i32 + 56 * (NODE::PV && !tt_was_pv) as i32
                 - 19 * tt_move.is_quiet() as i32
                 - 15 * correction_value.abs() / 128
@@ -723,7 +723,7 @@ fn search<NODE: NodeType>(
         }
         // Multi-Cut
         else if singular_score >= beta && !is_decisive(singular_score) {
-            td.tt_move_history.update(-442 - 108 * depth);
+            td.tt_move_history.update(depth, -442 - 108 * depth);
             return lerp(singular_score, beta, 0.4027);
         } else if singular_score > tt_score && td.stack[ply].mv != Move::NULL {
             tt_move = Move::NULL;
@@ -1121,7 +1121,7 @@ fn search<NODE: NodeType>(
         }
 
         if !NODE::PV {
-            td.tt_move_history.update(if best_move == tt_move_original { 792 } else { -779 });
+            td.tt_move_history.update(depth, if best_move == tt_move_original { 792 } else { -779 });
         }
     }
 

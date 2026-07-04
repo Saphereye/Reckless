@@ -105,25 +105,30 @@ impl Default for QuietHistory {
     }
 }
 
+// value + slope * (depth - pivot) ig
+// to cope better with ltc
 pub struct TtMoveHistory {
     value: i16,
+    slope: i16,
 }
 
 impl TtMoveHistory {
     const MAX_HISTORY: i32 = 8192;
 
-    pub fn get(&self) -> i32 {
-        self.value as i32
+    pub fn get(&self, depth: i32) -> i32 {
+        (self.value as i32 + self.slope as i32 * (depth - 4) / 10).clamp(-Self::MAX_HISTORY, Self::MAX_HISTORY)
     }
 
-    pub fn update(&mut self, bonus: i32) {
+    pub fn update(&mut self, depth: i32, bonus: i32) {
+        let x = (depth - 4).clamp(-10, 10);
         apply_bonus::<{ Self::MAX_HISTORY }>(&mut self.value, bonus);
+        apply_bonus::<{ Self::MAX_HISTORY }>(&mut self.slope, bonus * x / 10);
     }
 }
 
 impl Default for TtMoveHistory {
     fn default() -> Self {
-        Self { value: 0 }
+        Self { value: 0, slope: 0 }
     }
 }
 
