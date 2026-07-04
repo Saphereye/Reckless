@@ -485,6 +485,8 @@ fn search<NODE: NodeType>(
     td.stack[ply].tt_pv = tt_pv;
     td.stack[ply].reduction = 0;
     td.stack[ply].move_count = 0;
+    td.stack[ply].alate =
+        if NODE::ROOT { 0 } else { td.stack[ply - 1].alate + (td.stack[ply - 1].move_count > 2) as i32 };
     td.cutoff_count[ply + 2] = 0;
 
     // Quiet move ordering using eval difference
@@ -832,6 +834,17 @@ fn search<NODE: NodeType>(
             }
         }
 
+        let see0 = is_quiet && td.board.see(mv, 0);
+        let ph = if is_quiet { td.pawn_history.get(td.board.pawn_key(), td.board.moved_piece(mv), mv.to()) } else { 0 };
+        let lmr_logit = if is_quiet && depth >= 2 && move_count >= 2 {
+            let pmc = td.stack[ply - 1].move_count as i32;
+            let alate = td.stack[ply].alate;
+
+            -37600 * pmc - 122000 * alate - 118 * ph - 811000 * is_direct_check as i32 - 1080000 * see0 as i32
+        } else {
+            0
+        };
+
         let initial_nodes = td.nodes();
 
         make_move(td, ply, mv);
@@ -856,6 +869,7 @@ fn search<NODE: NodeType>(
                 reduction += 2171;
                 reduction -= 179 * history / 1024;
                 reduction += 418 * ((alpha - estimated_score).clamp(-65, 91)) / 128;
+                reduction += (lmr_logit + 1_362_000) / 1500;
             } else {
                 reduction += 1426;
                 reduction -= 130 * history / 1024;
