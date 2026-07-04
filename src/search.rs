@@ -792,7 +792,7 @@ fn search<NODE: NodeType>(
                 + 555 * correction_value.abs() / 1024
                 - 127;
 
-            if !in_check && !is_direct_check && is_quiet && depth < 14 && futility_value <= alpha {
+            if !in_check && !is_direct_check && is_quiet && futility_value <= alpha {
                 if !is_decisive(best_score) && best_score < futility_value {
                     best_score = futility_value;
                 }
