@@ -366,6 +366,10 @@ fn search<NODE: NodeType>(
     let hash = td.board.hash();
     let entry = td.shared.tt.read(hash, td.board.fiftymove_clock(), ply);
 
+    if entry.is_none() && depth >= 4 && !excluded {
+        depth -= 1;
+    }
+
     let mut tt_depth = 0;
     let mut tt_move = Move::NULL;
     let mut tt_score = Score::NONE;
