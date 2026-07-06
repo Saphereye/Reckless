@@ -406,6 +406,10 @@ fn search<NODE: NodeType>(
         }
     }
 
+    if !NODE::ROOT && !excluded && depth >= 6 && (tt_move.is_null() || (tt_depth + 8 <= depth)) {
+        depth -= 1;
+    }
+
     // Tablebases Probe
     #[cfg(feature = "syzygy")]
     if !NODE::ROOT
