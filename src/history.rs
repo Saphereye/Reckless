@@ -157,7 +157,7 @@ impl Default for NoisyHistory {
 }
 
 pub struct CorrectionHistory {
-    // [bucket][side_to_move][key]
+    // [phase][side_to_move][key]
     entries: Box<[[[AtomicI16; Self::SIZE]; 2]; 16]>,
 }
 
@@ -167,20 +167,20 @@ impl CorrectionHistory {
     const SIZE: usize = 65536;
     const MASK: usize = Self::SIZE - 1;
 
-    pub fn get(&self, stm: Color, key: u64, bucket: usize) -> i32 {
-        self.entries[bucket][stm][key as usize & Self::MASK].load(Ordering::Relaxed) as i32
+    pub fn get(&self, stm: Color, key: u64, phase: usize) -> i32 {
+        self.entries[phase][stm][key as usize & Self::MASK].load(Ordering::Relaxed) as i32
     }
 
-    pub fn update(&self, stm: Color, key: u64, bucket: usize, bonus: i32) {
-        let current = self.entries[bucket][stm][key as usize & Self::MASK].load(Ordering::Relaxed) as i32;
+    pub fn update(&self, stm: Color, key: u64, phase: usize, bonus: i32) {
+        let current = self.entries[phase][stm][key as usize & Self::MASK].load(Ordering::Relaxed) as i32;
         let new = current + bonus - bonus.abs() * current / Self::MAX_HISTORY;
-        self.entries[bucket][stm][key as usize & Self::MASK].store(new as i16, Ordering::Relaxed);
+        self.entries[phase][stm][key as usize & Self::MASK].store(new as i16, Ordering::Relaxed);
     }
 
     pub fn clear(&self) {
-        for bucket in self.entries.iter() {
-            for entries in bucket.iter() {
-                for entry in entries {
+        for phase in self.entries.iter() {
+            for stm in phase.iter() {
+                for entry in stm.iter() {
                     entry.store(0, Ordering::Relaxed);
                 }
             }

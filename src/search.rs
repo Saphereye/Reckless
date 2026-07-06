@@ -1363,12 +1363,12 @@ fn qsearch<NODE: NodeType>(td: &mut ThreadData, mut alpha: i32, beta: i32, ply: 
 
 fn eval_correction(td: &ThreadData, ply: isize) -> i32 {
     let stm = td.board.side_to_move();
-    let bucket = td.board.fiftymove_clock_bucket();
+    let phase = td.board.phase_bucket();
     let corrhist = td.corrhist();
 
-    (corrhist.pawn.get(stm, td.board.pawn_key(), bucket)
-        + corrhist.non_pawn[Color::White].get(stm, td.board.non_pawn_key(Color::White), bucket)
-        + corrhist.non_pawn[Color::Black].get(stm, td.board.non_pawn_key(Color::Black), bucket)
+    (corrhist.pawn.get(stm, td.board.pawn_key(), phase)
+        + corrhist.non_pawn[Color::White].get(stm, td.board.non_pawn_key(Color::White), phase)
+        + corrhist.non_pawn[Color::Black].get(stm, td.board.non_pawn_key(Color::Black), phase)
         + td.continuation_corrhist.get(
             td.stack[ply - 2].contcorrhist,
             td.stack[ply - 1].piece,
@@ -1384,14 +1384,16 @@ fn eval_correction(td: &ThreadData, ply: isize) -> i32 {
 
 fn update_correction_histories(td: &mut ThreadData, depth: i32, diff: i32, ply: isize) {
     let stm = td.board.side_to_move();
-    let bucket = td.board.fiftymove_clock_bucket();
+    let phase = td.board.phase_bucket();
+    // dbg_stats(phase as i64, 1);
     let corrhist = td.corrhist();
+    // dbg_stats(diff.abs(), 0);
     let bonus = (148 * depth * diff / 128).clamp(-4678, 2496);
 
-    corrhist.pawn.update(stm, td.board.pawn_key(), bucket, bonus);
+    corrhist.pawn.update(stm, td.board.pawn_key(), phase, bonus);
 
-    corrhist.non_pawn[Color::White].update(stm, td.board.non_pawn_key(Color::White), bucket, bonus);
-    corrhist.non_pawn[Color::Black].update(stm, td.board.non_pawn_key(Color::Black), bucket, bonus);
+    corrhist.non_pawn[Color::White].update(stm, td.board.non_pawn_key(Color::White), phase, bonus);
+    corrhist.non_pawn[Color::Black].update(stm, td.board.non_pawn_key(Color::Black), phase, bonus);
 
     if td.stack[ply - 1].mv.is_present() && td.stack[ply - 2].mv.is_present() {
         td.continuation_corrhist.update(

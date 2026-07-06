@@ -76,6 +76,10 @@ impl Board {
         (self.fiftymove_clock().saturating_sub(8) as usize / 8).min(15)
     }
 
+    pub fn phase_bucket(&self) -> usize {
+        (self.occupancies().popcount() * 16 / 33).min(15)
+    }
+
     pub fn hash(&self) -> u64 {
         // To mitigate Graph History Interaction (GHI) problems, the hash key is changed
         // every 8 plies to distinguish between positions that would otherwise appear
