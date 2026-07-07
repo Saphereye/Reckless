@@ -584,8 +584,12 @@ fn search<NODE: NodeType>(
     {
         debug_assert_ne!(td.stack[ply - 1].mv, Move::NULL);
 
-        let r =
-            (4407 + 917 * improving as i32 + 265 * depth + 477 * (estimated_score - beta).clamp(0, 1187) / 128) / 1024;
+        let r = (4207
+            + 917 * improving as i32
+            + 1024 * (eval + td.stack[ply - 1].eval > 0) as i32
+            + 265 * depth
+            + 477 * (estimated_score - beta).clamp(0, 1187) / 128)
+            / 1024;
 
         td.stack[ply].conthist = td.stack.sentinel().conthist;
         td.stack[ply].contcorrhist = td.stack.sentinel().contcorrhist;
