@@ -226,16 +226,23 @@ impl Default for ContinuationCorrectionHistory {
 
 pub struct ContinuationHistory {
     // [in_check][capture][piece][to][piece][to]
-    entries: HugeBox<ContinuationHistoryType>,
+    entries: Box<[PieceToHistory<i16>; Self::BUCKETS]>,
 }
 
 impl ContinuationHistory {
     const MAX_HISTORY: i32 = 15320;
+    const BUCKETS: usize = 512;
+
+    fn bucket(in_check: bool, capture: bool, piece: Piece, to: Square) -> usize {
+        ((in_check as u32) | ((capture as u32) << 1) | ((piece as u32) << 2) | ((to as u32) << 6))
+            .wrapping_mul(0x9E3779B1) as usize
+            & (Self::BUCKETS - 1)
+    }
 
     pub fn subtable_ptr(
         &mut self, in_check: bool, capture: bool, piece: Piece, to: Square,
     ) -> *mut PieceToHistory<i16> {
-        &raw mut self.entries[in_check as usize][capture as usize][piece][to]
+        &raw mut self.entries[Self::bucket(in_check, capture, piece, to)]
     }
 
     pub fn get(&self, subtable_ptr: *mut PieceToHistory<i16>, piece: Piece, to: Square) -> i32 {
@@ -250,7 +257,7 @@ impl ContinuationHistory {
 
 impl Default for ContinuationHistory {
     fn default() -> Self {
-        Self { entries: HugeBox::new_zeroed() }
+        Self { entries: zeroed_box() }
     }
 }
 
