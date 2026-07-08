@@ -789,7 +789,7 @@ fn search<NODE: NodeType>(
                 + 79 * depth
                 + 55 * history / 1024
                 + 77 * (eval >= beta) as i32
-                + 555 * correction_value.abs() / 1024
+                + 555 * correction_value.max(0) / 1024
                 - 127;
 
             if !in_check && !is_direct_check && is_quiet && depth < 14 && futility_value <= alpha {
