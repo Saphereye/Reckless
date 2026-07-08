@@ -584,7 +584,7 @@ fn search<NODE: NodeType>(
     {
         debug_assert_ne!(td.stack[ply - 1].mv, Move::NULL);
 
-        let r = (3300
+        let r = (3200
             + 917 * improving as i32
             + 1024 * (eval + td.stack[ply - 1].eval > 0) as i32
             + 265 * depth
