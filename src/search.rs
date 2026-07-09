@@ -902,7 +902,7 @@ fn search<NODE: NodeType>(
             reduction += ((td.nodes() + td.id as u64 * 27) % 128) as i32 - 59;
 
             // dbg_stats(td.distance_from_pv[ply], 1);
-            let extra = !NODE::PV && td.distance_from_pv[ply] <= 2;
+            let extra = td.distance_from_pv[ply] <= 2;
             // dbg_hit(extra, 0);
             let reduced_depth =
                 (new_depth - reduction / 1024).clamp(1, new_depth + 2 + extra as i32) + 2 * NODE::PV as i32;
