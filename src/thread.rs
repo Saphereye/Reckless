@@ -240,6 +240,7 @@ pub struct ThreadData {
     pub cutoff_count: PlyArray<i32, { MAX_PLY + 16 }>,
     pub excluded: PlyArray<Move, { MAX_PLY + 16 }>,
     pub writer: Box<dyn UciWriter>,
+    pub distance_from_pv: PlyArray<u16, { MAX_PLY + 16 }>,
 }
 
 impl ThreadData {
@@ -280,6 +281,7 @@ impl ThreadData {
             writer: Box::new(StdoutWriter),
             #[cfg(target_arch = "wasm32")]
             writer: Box::new(BufferWriter::default()),
+            distance_from_pv: PlyArray::default(),
         }
     }
 

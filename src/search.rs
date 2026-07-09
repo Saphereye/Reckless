@@ -97,6 +97,7 @@ pub fn start(td: &mut ThreadData, report: Report, thread_count: usize) {
 
         let mut delta = 23;
         let mut reduction = 0;
+        td.distance_from_pv = PlyArray::default();
 
         for index in 0..td.multi_pv {
             td.pv_index = index;
@@ -310,6 +311,10 @@ fn search<NODE: NodeType>(
 
     if !NODE::ROOT && NODE::PV {
         td.pv_table.clear(ply as usize);
+    }
+
+    if NODE::PV {
+        td.distance_from_pv[ply] = 0;
     }
 
     if td.shared.status.get() == Status::STOPPED {
@@ -836,6 +841,8 @@ fn search<NODE: NodeType>(
 
         make_move(td, ply, mv);
 
+        td.distance_from_pv[ply + 1] = td.distance_from_pv[ply] + (move_count as u16 - 1);
+
         let mut new_depth = depth - 1 + if move_count == 1 { extension } else { 0 };
         let mut score = Score::ZERO;
 
@@ -894,7 +901,11 @@ fn search<NODE: NodeType>(
 
             reduction += ((td.nodes() + td.id as u64 * 27) % 128) as i32 - 59;
 
-            let reduced_depth = (new_depth - reduction / 1024).clamp(1, new_depth + 2) + 2 * NODE::PV as i32;
+            // dbg_stats(td.distance_from_pv[ply], 1);
+            let extra = !NODE::PV && td.distance_from_pv[ply] <= 2;
+            // dbg_hit(extra, 0);
+            let reduced_depth =
+                (new_depth - reduction / 1024).clamp(1, new_depth + 2 + extra as i32) + 2 * NODE::PV as i32;
 
             td.stack[ply].reduction = reduction;
             score = -search::<NonPV>(td, -alpha - 1, -alpha, reduced_depth, true, ply + 1);
