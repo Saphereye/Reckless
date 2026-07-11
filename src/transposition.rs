@@ -232,7 +232,10 @@ impl TranspositionTable {
                         break;
                     }
 
-                    let quality = candidate.depth() - 4 * candidate.relative_age(tt_age);
+                    let quality = candidate.depth()
+                        - 4 * candidate.relative_age(tt_age)
+                        - 100000 * is_decisive(candidate.score as i32) as i32;
+
                     if quality < lowest_quality {
                         replacement_index = Some(index);
                         lowest_quality = quality;
