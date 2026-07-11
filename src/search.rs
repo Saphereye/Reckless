@@ -1081,6 +1081,7 @@ fn search<NODE: NodeType>(
             );
         } else {
             td.quiet_history.update(td.board.all_threats(), stm, best_move, quiet_bonus);
+            td.low_ply_history.update(ply as usize, best_move, quiet_bonus);
             td.pawn_history.update(td.board.pawn_key(), td.board.moved_piece(best_move), best_move.to(), quiet_bonus);
             update_continuation_histories(td, ply, td.board.moved_piece(best_move), best_move.to(), cont_bonus);
 
@@ -1094,6 +1095,7 @@ fn search<NODE: NodeType>(
                     mv.to(),
                     -quiet_malus * scale / 1024,
                 );
+                td.low_ply_history.update(ply as usize, mv, -quiet_malus * scale / 1024);
                 update_continuation_histories(td, ply, td.board.moved_piece(mv), mv.to(), -cont_malus * scale / 1024);
             }
         }

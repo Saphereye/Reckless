@@ -194,6 +194,36 @@ impl Default for CorrectionHistory {
     }
 }
 
+pub struct LowPlyHistory {
+    // [ply][from][to]
+    entries: Box<[FromToHistory<i16>; Self::MAX_LOW_PLY]>,
+}
+
+impl LowPlyHistory {
+    const MAX_HISTORY: i32 = 8192;
+    pub const MAX_LOW_PLY: usize = 4;
+
+    pub fn get(&self, ply: usize, mv: Move) -> i32 {
+        if ply >= Self::MAX_LOW_PLY {
+            return 0;
+        }
+        self.entries[ply][mv.from()][mv.to()] as i32
+    }
+
+    pub fn update(&mut self, ply: usize, mv: Move, bonus: i32) {
+        if ply >= Self::MAX_LOW_PLY {
+            return;
+        }
+        apply_bonus::<{ Self::MAX_HISTORY }>(&mut self.entries[ply][mv.from()][mv.to()], bonus);
+    }
+}
+
+impl Default for LowPlyHistory {
+    fn default() -> Self {
+        Self { entries: zeroed_box() }
+    }
+}
+
 pub struct ContinuationCorrectionHistory {
     // [in_check][capture][piece][to][piece][to]
     entries: HugeBox<ContinuationHistoryType>,

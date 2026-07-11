@@ -1,4 +1,5 @@
 use crate::{
+    history::LowPlyHistory,
     lookup::king_attacks,
     search::NodeType,
     setwise::{bishop_attacks_setwise, knight_attacks_setwise, pawn_attacks_setwise, rook_attacks_setwise},
@@ -208,7 +209,12 @@ impl MovePicker {
                 + 10723 * td.board.checking_squares(pt).contains(mv.to()) as i32
                 - 8875 * threatened[pt].contains(mv.to()) as i32
                 + 3446 * offense[pt].contains(mv.to()) as i32
-                - 4494 * wall_pawns.contains(mv.from()) as i32;
+                - 4494 * wall_pawns.contains(mv.from()) as i32
+                + if (ply as usize) < LowPlyHistory::MAX_LOW_PLY {
+                    1000 * td.low_ply_history.get(ply as usize, mv) / 1024
+                } else {
+                    0
+                };
         }
     }
 }

@@ -20,7 +20,8 @@ pub static WORKERS_REMAINING: AtomicUsize = AtomicUsize::new(0);
 use crate::{
     board::Board,
     history::{
-        ContinuationCorrectionHistory, ContinuationHistory, CorrectionHistory, NoisyHistory, PawnHistory, QuietHistory,
+        ContinuationCorrectionHistory, ContinuationHistory, CorrectionHistory, LowPlyHistory, NoisyHistory,
+        PawnHistory, QuietHistory,
     },
     nnue::{Network, ParametersHandle},
     numa::{NumaConfig, NumaReplicable, NumaReplicated, NumaReplicatedAccessToken, NumaReplicationContext},
@@ -223,6 +224,7 @@ pub struct ThreadData {
     pub noisy_history: NoisyHistory,
     pub quiet_history: QuietHistory,
     pub pawn_history: PawnHistory,
+    pub low_ply_history: LowPlyHistory,
     pub continuation_history: ContinuationHistory,
     pub continuation_corrhist: ContinuationCorrectionHistory,
     pub best_move_changes: usize,
@@ -260,6 +262,7 @@ impl ThreadData {
             noisy_history: NoisyHistory::default(),
             quiet_history: QuietHistory::default(),
             pawn_history: PawnHistory::default(),
+            low_ply_history: LowPlyHistory::default(),
             continuation_history: ContinuationHistory::default(),
             continuation_corrhist: ContinuationCorrectionHistory::default(),
             best_move_changes: 0,
