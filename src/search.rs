@@ -503,7 +503,7 @@ fn search<NODE: NodeType>(
 
     // Hindsight reductions
     if !NODE::ROOT && !in_check && !excluded && is_valid(td.stack[ply - 1].eval) {
-        let eval_delta = eval + td.stack[ply - 1].eval;
+        let eval_delta = eval + td.stack[ply - 1].eval + 50;
         let reduction = td.stack[ply - 1].reduction;
 
         if reduction >= 2249 && eval_delta < 0 {
