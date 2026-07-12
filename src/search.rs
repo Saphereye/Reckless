@@ -861,6 +861,7 @@ fn search<NODE: NodeType>(
             } else {
                 reduction += 1426;
                 reduction -= 130 * history / 1024;
+                reduction += 400 * (move_picker.stage() == Stage::BadNoisy) as i32;
             }
 
             if NODE::PV {
