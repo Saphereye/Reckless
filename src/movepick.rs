@@ -211,7 +211,7 @@ impl MovePicker {
                 + 3446 * offense[pt].contains(mv.to()) as i32
                 - 4494 * wall_pawns.contains(mv.from()) as i32
                 + if (ply as usize) < LowPlyHistory::MAX_LOW_PLY {
-                    1000 * td.low_ply_history.get(ply as usize, mv) / 1024
+                    500 * td.low_ply_history.get(ply as usize, mv) / (1024 * (1 + ply as i32))
                 } else {
                     0
                 };
