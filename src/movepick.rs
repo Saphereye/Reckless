@@ -196,6 +196,17 @@ impl MovePicker {
             Bitboard(0)
         };
 
+        #[cfg(target_arch = "x86_64")]
+        unsafe {
+            use std::arch::x86_64::{_MM_HINT_T0, _mm_prefetch};
+            for idx in [1isize, 2, 4, 6] {
+                let ptr = td.stack[ply - idx].conthist;
+                if !ptr.is_null() {
+                    _mm_prefetch::<_MM_HINT_T0>(ptr.cast::<i8>());
+                }
+            }
+        }
+
         for entry in self.list.iter_mut() {
             let mv = entry.mv;
             let pt = td.board.type_on(mv.from());
