@@ -76,7 +76,7 @@ impl<T> Drop for HugeBox<T> {
 
 fn apply_bonus<const MAX: i32>(entry: &mut i16, bonus: i32) {
     let bonus = bonus.clamp(-MAX, MAX);
-    *entry += (bonus - bonus.abs() * (*entry) as i32 / MAX) as i16;
+    *entry += (bonus - (*entry as i32 * 2 * bonus.abs()) / (2 * MAX + bonus.abs())) as i16;
 }
 
 pub struct QuietHistory {
