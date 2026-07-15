@@ -885,6 +885,10 @@ fn search<NODE: NodeType>(
                 reduction += 400 * (!NODE::PV && !cut_node) as i32;
             }
 
+            if NODE::PV || cut_node {
+                reduction += 128 * tt_pv as i32 + reduction * 272 / (256 * depth + 285);
+            }
+
             if is_valid(tt_move_score) && is_valid(singular_score) {
                 let margin = tt_move_score - singular_score;
                 reduction += (496 * (margin - 185) / 128).clamp(0, 2021);
