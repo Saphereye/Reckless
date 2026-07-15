@@ -20,7 +20,8 @@ pub static WORKERS_REMAINING: AtomicUsize = AtomicUsize::new(0);
 use crate::{
     board::Board,
     history::{
-        ContinuationCorrectionHistory, ContinuationHistory, CorrectionHistory, NoisyHistory, PawnHistory, QuietHistory,
+        ContinuationCorrectionHistory, ContinuationHistory, CorrectionHistory, MaterialCorrectionHistory, NoisyHistory,
+        PawnHistory, QuietHistory,
     },
     nnue::{Network, ParametersHandle},
     numa::{NumaConfig, NumaReplicable, NumaReplicated, NumaReplicatedAccessToken, NumaReplicationContext},
@@ -144,6 +145,7 @@ impl Default for Status {
 #[derive(Default)]
 pub struct SharedCorrectionHistory {
     pub pawn: CorrectionHistory,
+    pub material: MaterialCorrectionHistory,
     pub non_pawn: [CorrectionHistory; 2],
 }
 

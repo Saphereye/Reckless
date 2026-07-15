@@ -1,6 +1,9 @@
 use std::sync::atomic::{AtomicI16, Ordering};
 
-use crate::types::{Bitboard, Color, Move, Piece, PieceType, Square};
+use crate::{
+    board::Board,
+    types::{Bitboard, Color, Move, Piece, PieceType, Square},
+};
 
 type FromToHistory<T> = [[T; 64]; 64];
 type PieceToHistory<T> = [[T; 64]; 13];
@@ -262,5 +265,52 @@ fn zeroed_box<T>() -> Box<T> {
             std::alloc::handle_alloc_error(layout);
         }
         Box::<T>::from_raw(ptr.cast())
+    }
+}
+
+pub struct MaterialCorrectionHistory {
+    // [bucket][side_to_move][qrb]
+    entries: Box<[[[AtomicI16; Self::QRB_SIZE]; 2]; 16]>,
+}
+
+impl MaterialCorrectionHistory {
+    const MAX_HISTORY: i32 = 14605;
+    const QRB_SIZE: usize = 64;
+
+    pub fn get(&self, stm: Color, qrb: usize, bucket: usize) -> i32 {
+        self.entries[bucket][stm][qrb].load(Ordering::Relaxed) as i32
+    }
+
+    pub fn update(&self, stm: Color, qrb: usize, bucket: usize, bonus: i32) {
+        let idx = &self.entries[bucket][stm][qrb];
+        let current = idx.load(Ordering::Relaxed) as i32;
+        let new = current + bonus - bonus.abs() * current / Self::MAX_HISTORY;
+        idx.store(new as i16, Ordering::Relaxed);
+    }
+
+    pub fn clear(&self) {
+        for bucket in self.entries.iter() {
+            for entries in bucket.iter() {
+                for entry in entries {
+                    entry.store(0, Ordering::Relaxed);
+                }
+            }
+        }
+    }
+
+    pub fn index(board: &Board, stm: Color) -> usize {
+        let us = !board.colored_pieces(stm, PieceType::Rook).is_empty() as usize
+            | (!board.colored_pieces(stm, PieceType::Bishop).is_empty() as usize) << 1
+            | (!board.colored_pieces(stm, PieceType::Queen).is_empty() as usize) << 2;
+        let them = !board.colored_pieces(!stm, PieceType::Rook).is_empty() as usize
+            | (!board.colored_pieces(!stm, PieceType::Bishop).is_empty() as usize) << 1
+            | (!board.colored_pieces(!stm, PieceType::Queen).is_empty() as usize) << 2;
+        us | (them << 3)
+    }
+}
+
+impl Default for MaterialCorrectionHistory {
+    fn default() -> Self {
+        Self { entries: zeroed_box() }
     }
 }
