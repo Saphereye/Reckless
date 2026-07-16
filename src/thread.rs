@@ -458,7 +458,7 @@ impl Default for PrincipalVariationTable {
 
 #[derive(Clone)]
 pub struct RootPV {
-    table: Box<[Move; MAX_PLY + 1]>,
+    table: [Move; MAX_PLY + 1],
     len: usize,
 }
 
@@ -476,6 +476,6 @@ impl RootPV {
 
 impl Default for RootPV {
     fn default() -> Self {
-        Self { table: Box::new([Move::NULL; MAX_PLY + 1]), len: 0 }
+        Self { table: [Move::NULL; MAX_PLY + 1], len: 0 }
     }
 }
