@@ -337,6 +337,37 @@ impl Network {
 
         Some(baseline - without)
     }
+
+    pub fn prefetch_pst_weights(&self, mv: Move, board: &Board) {
+        #[cfg(target_arch = "x86_64")]
+        {
+            use crate::nnue::accumulator::psq::pst_index;
+            use std::arch::x86_64::{_MM_HINT_T0, _mm_prefetch};
+
+            let piece = board.piece_on(mv.from());
+            if piece.piece_type() == PieceType::King {
+                return;
+            }
+
+            let parameters = self.parameters.as_ref();
+            let moved_type = if mv.is_promotion() { mv.promo_piece_type() } else { piece.piece_type() };
+            let captured = board.piece_on(mv.to());
+
+            for stm in [Color::White, Color::Black] {
+                let king = board.king_square(stm);
+                let add = pst_index(piece.color(), moved_type, mv.to(), king, stm) as usize;
+                let sub = pst_index(piece.color(), piece.piece_type(), mv.from(), king, stm) as usize;
+                unsafe {
+                    _mm_prefetch(parameters.ft_piece_weights[add].as_ptr() as *const i8, _MM_HINT_T0);
+                    _mm_prefetch(parameters.ft_piece_weights[sub].as_ptr() as *const i8, _MM_HINT_T0);
+                    if captured != Piece::None {
+                        let cap = pst_index(captured.color(), captured.piece_type(), mv.to(), king, stm) as usize;
+                        _mm_prefetch(parameters.ft_piece_weights[cap].as_ptr() as *const i8, _MM_HINT_T0);
+                    }
+                }
+            }
+        }
+    }
 }
 
 impl BoardObserver for Network {

@@ -201,7 +201,7 @@ unsafe fn apply_changes(
     }
 }
 
-fn pst_index(color: Color, piece: PieceType, square: Square, king: Square, pov: Color) -> PstFeature {
+pub fn pst_index(color: Color, piece: PieceType, square: Square, king: Square, pov: Color) -> PstFeature {
     let flip = (7 * ((king.is_kingside()) as u8)) ^ (56 * (pov as u8));
 
     INPUT_BUCKETS_LAYOUT[king ^ flip] as PstFeature * 768
