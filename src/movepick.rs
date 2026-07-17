@@ -1,4 +1,7 @@
+use std::arch::x86_64::{_MM_HINT_T0, _mm_prefetch};
+
 use crate::{
+    history::PawnHistory,
     lookup::king_attacks,
     search::NodeType,
     setwise::{bishop_attacks_setwise, knight_attacks_setwise, pawn_attacks_setwise, rook_attacks_setwise},
@@ -143,6 +146,23 @@ impl MovePicker {
     }
 
     fn score_quiet(&mut self, td: &ThreadData, ply: isize) {
+        unsafe {
+            // let ptrs = [
+            //     td.stack[ply - 1].conthist as *const i8,
+            //     td.stack[ply - 2].conthist as *const i8,
+            //     td.stack[ply - 4].conthist as *const i8,
+            //     td.stack[ply - 6].conthist as *const i8,
+            // ];
+            let pawn_ptr =
+                &td.pawn_history.entries[td.board.pawn_key() as usize & PawnHistory::MASK] as *const _ as *const i8;
+
+            for i in 0..26usize {
+                // for &p in &ptrs {
+                //     _mm_prefetch::<_MM_HINT_T0>(p.add(i * 64));
+                // }
+                _mm_prefetch::<_MM_HINT_T0>(pawn_ptr.add(i * 64));
+            }
+        }
         let threats = td.board.all_threats();
         let side = td.board.side_to_move();
         let pawn_key = td.board.pawn_key();

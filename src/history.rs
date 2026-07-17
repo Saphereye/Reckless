@@ -107,14 +107,14 @@ impl Default for QuietHistory {
 
 pub struct PawnHistory {
     // [pawn_key_bucket][piece][to]
-    entries: Box<[PieceToHistory<i16>; Self::SIZE]>,
+    pub entries: Box<[PieceToHistory<i16>; Self::SIZE]>,
 }
 
 impl PawnHistory {
     const MAX_HISTORY: i32 = 8192;
 
     const SIZE: usize = 512;
-    const MASK: usize = Self::SIZE - 1;
+    pub const MASK: usize = Self::SIZE - 1;
 
     pub fn get(&self, pawn_key: u64, piece: Piece, to: Square) -> i32 {
         self.entries[pawn_key as usize & Self::MASK][piece][to] as i32
