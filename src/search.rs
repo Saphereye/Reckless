@@ -789,6 +789,7 @@ fn search<NODE: NodeType>(
             // Futility Pruning (FP)
             let futility_value = eval
                 + 79 * depth
+                + 60 * improving as i32
                 + 55 * history / 1024
                 + 77 * (eval >= beta) as i32
                 + 555 * correction_value.abs() / 1024
