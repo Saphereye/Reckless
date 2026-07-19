@@ -200,7 +200,7 @@ impl MovePicker {
             let mv = entry.mv;
             let pt = td.board.type_on(mv.from());
 
-            entry.score = 1763 * td.quiet_history.get(threats, side, mv) / 1024
+            entry.score = 1763 * td.quiet_history.get(td.board.threat_layers(), pt, side, mv) / 1024
                 + 1024 * td.pawn_history.get(pawn_key, td.board.moved_piece(mv), mv.to()) / 1024
                 + 1614 * td.conthist(ply, 1, mv) / 1024
                 + 1066 * td.conthist(ply, 2, mv) / 1024

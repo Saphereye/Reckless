@@ -1,4 +1,5 @@
 use crate::{
+    history::ThreatLayers,
     lookup::{
         attacks, between, bishop_attacks, cuckoo, cuckoo_a, cuckoo_b, h1, h2, king_attacks, knight_attacks,
         pawn_attacks, ray_pass, rook_attacks,
@@ -34,6 +35,7 @@ struct InternalState {
     captured: Piece,
     piece_threats: [Bitboard; PieceType::NUM],
     all_threats: Bitboard,
+    threats: ThreatLayers,
     pinned: [Bitboard; Color::NUM],
     pinners: [Bitboard; Color::NUM],
     checkers: Bitboard,
@@ -133,6 +135,10 @@ impl Board {
         self.state.all_threats
     }
 
+    pub const fn threat_layers(&self) -> &ThreatLayers {
+        &self.state.threats
+    }
+
     pub const fn piece_threats(&self, pt: PieceType) -> Bitboard {
         self.state.piece_threats[pt as usize]
     }
@@ -140,6 +146,11 @@ impl Board {
     pub fn prior_threats(&self) -> Bitboard {
         debug_assert!(!self.state_stack.is_empty());
         self.state_stack[self.state_stack.len() - 1].all_threats
+    }
+
+    pub fn prior_threat_layers(&self) -> &ThreatLayers {
+        debug_assert!(!self.state_stack.is_empty());
+        &self.state_stack[self.state_stack.len() - 1].threats
     }
 
     pub const fn captured_piece(&self) -> Piece {
@@ -459,6 +470,8 @@ impl Board {
             | self.piece_threats(PieceType::Rook)
             | self.piece_threats(PieceType::Queen)
             | self.piece_threats(PieceType::King);
+
+        self.state.threats = ThreatLayers::compute(self, !stm);
 
         let diagonal = self.pieces2(PieceType::Bishop, PieceType::Queen);
         let orthogonal = self.pieces2(PieceType::Rook, PieceType::Queen);

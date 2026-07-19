@@ -1,6 +1,10 @@
 use std::sync::atomic::{AtomicI16, Ordering};
 
-use crate::types::{Bitboard, Color, Move, Piece, PieceType, Square};
+use crate::{
+    board::Board,
+    lookup::*,
+    types::{Bitboard, Color, Move, Piece, PieceType, Square},
+};
 
 type FromToHistory<T> = [[T; 64]; 64];
 type PieceToHistory<T> = [[T; 64]; 13];
@@ -79,6 +83,50 @@ fn apply_bonus<const MAX: i32>(entry: &mut i16, bonus: i32) {
     *entry += (bonus - bonus.abs() * (*entry) as i32 / MAX) as i16;
 }
 
+#[derive(Copy, Clone, Default)]
+pub struct ThreatLayers {
+    by_pawn: Bitboard,
+    by_minor: Bitboard,
+    by_rook: Bitboard,
+}
+
+impl ThreatLayers {
+    pub fn compute(board: &Board, them: Color) -> Self {
+        let enemy = board.colors(them);
+        let occ = board.occupancies();
+
+        let mut by_pawn = Bitboard(0);
+        for sq in board.pieces(PieceType::Pawn) & enemy {
+            by_pawn |= pawn_attacks(sq, them);
+        }
+
+        let mut by_minor = by_pawn;
+        for sq in board.pieces(PieceType::Knight) & enemy {
+            by_minor |= knight_attacks(sq);
+        }
+        for sq in board.pieces(PieceType::Bishop) & enemy {
+            by_minor |= bishop_attacks(sq, occ);
+        }
+
+        let mut by_rook = by_minor;
+        for sq in board.pieces(PieceType::Rook) & enemy {
+            by_rook |= rook_attacks(sq, occ);
+        }
+
+        Self { by_pawn, by_minor, by_rook }
+    }
+
+    pub fn cheaper_attacks(&self, pt: PieceType, sq: Square) -> bool {
+        match pt {
+            PieceType::Pawn => self.by_pawn.contains(sq),
+            PieceType::Knight | PieceType::Bishop => self.by_minor.contains(sq),
+            PieceType::Rook => self.by_rook.contains(sq),
+            PieceType::Queen | PieceType::King => self.by_rook.contains(sq),
+            PieceType::None => false,
+        }
+    }
+}
+
 pub struct QuietHistory {
     // [side_to_move][from_threatened][to_threatened][from][to]
     entries: Box<[[[FromToHistory<i16>; 2]; 2]; 2]>,
@@ -87,14 +135,18 @@ pub struct QuietHistory {
 impl QuietHistory {
     const MAX_HISTORY: i32 = 8192;
 
-    pub fn get(&self, threats: Bitboard, stm: Color, mv: Move) -> i32 {
-        self.entries[stm][threats.contains(mv.from()) as usize][threats.contains(mv.to()) as usize][mv.from()][mv.to()]
-            as i32
+    pub fn get(&self, threats: &ThreatLayers, piece_type: PieceType, stm: Color, mv: Move) -> i32 {
+        debug_assert!(!mv.is_promotion());
+        let ft = threats.cheaper_attacks(piece_type, mv.from()) as usize;
+        let tt = threats.cheaper_attacks(piece_type, mv.to()) as usize;
+        self.entries[stm][ft][tt][mv.from()][mv.to()] as i32
     }
 
-    pub fn update(&mut self, threats: Bitboard, stm: Color, mv: Move, bonus: i32) {
-        let entry = &mut self.entries[stm][threats.contains(mv.from()) as usize][threats.contains(mv.to()) as usize]
-            [mv.from()][mv.to()];
+    pub fn update(&mut self, threats: &ThreatLayers, piece_type: PieceType, stm: Color, mv: Move, bonus: i32) {
+        debug_assert!(!mv.is_promotion());
+        let ft = threats.cheaper_attacks(piece_type, mv.from()) as usize;
+        let tt = threats.cheaper_attacks(piece_type, mv.to()) as usize;
+        let entry = &mut self.entries[stm][ft][tt][mv.from()][mv.to()];
         apply_bonus::<{ Self::MAX_HISTORY }>(entry, bonus);
     }
 }
