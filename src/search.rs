@@ -67,6 +67,9 @@ pub fn start(td: &mut ThreadData, report: Report, thread_count: usize) {
     let mut pv_stability = 0;
     let mut soft_stop_voted = false;
 
+    let mut eval_last_unstable_log_nodes = 0.0f32;
+    let mut pv_last_unstable_log_nodes = 0.0f32;
+
     if td.root_moves.is_empty() {
         if report == Report::Full {
             td.print_uci_info(0);
@@ -186,12 +189,14 @@ pub fn start(td: &mut ThreadData, report: Report, thread_count: usize) {
             eval_stability += 1;
         } else {
             eval_stability = 0;
+            eval_last_unstable_log_nodes = (td.nodes().max(1) as f32).log2();
         }
 
         if last_best_rootmove.mv == td.root_moves[0].mv {
             pv_stability += 1;
         } else {
             pv_stability = 0;
+            pv_last_unstable_log_nodes = (td.nodes().max(1) as f32).log2();
         }
 
         let last_score = last_best_rootmove.score;
@@ -243,6 +248,10 @@ pub fn start(td: &mut ThreadData, report: Report, thread_count: usize) {
         }
 
         let multiplier = || {
+            let log_nodes = (td.nodes().max(1) as f32).log2();
+            let pv_elapsed = (log_nodes - pv_last_unstable_log_nodes).max(0.0);
+            let eval_elapsed = (log_nodes - eval_last_unstable_log_nodes).max(0.0);
+
             let nodes = {
                 let fraction = td.root_moves[0].nodes as f32 / td.nodes() as f32;
                 (3.1838 - 2.6554 * fraction).max(0.5460)
@@ -253,9 +262,9 @@ pub fn start(td: &mut ThreadData, report: Report, thread_count: usize) {
                 (0.7426 + 0.0480 * difference).clamp(0.7214, 1.4031)
             };
 
-            let pv_stability = (1.2881 - 0.0440 * pv_stability as f32).max(0.7160);
+            let pv_stability = (1.2881 - 0.0440 * pv_elapsed).max(0.7160);
 
-            let eval_stability = (1.2664 - 0.0416 * eval_stability as f32).max(0.8642);
+            let eval_stability = (1.2664 - 0.0416 * eval_elapsed).max(0.8642);
 
             let best_move_stability = 1.1500 + (0.2526 * td.best_move_changes as f32).ln_1p();
 
