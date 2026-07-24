@@ -133,19 +133,21 @@ impl Default for PawnHistory {
 }
 
 pub struct NoisyHistory {
-    // [piece][to][captured_piece_type][to_threatened]
-    entries: Box<PieceToHistory<[[i16; 2]; 7]>>,
+    // [piece][to][captured_piece_type][to_threatened][see_bucket]
+    entries: Box<PieceToHistory<[[[i16; 2]; 2]; 7]>>,
 }
 
 impl NoisyHistory {
     const MAX_HISTORY: i32 = 12800;
 
-    pub fn get(&self, threats: Bitboard, piece: Piece, sq: Square, captured: PieceType) -> i32 {
-        self.entries[piece][sq][captured][threats.contains(sq) as usize] as i32
+    pub fn get(&self, threats: Bitboard, piece: Piece, sq: Square, captured: PieceType, see_good: bool) -> i32 {
+        self.entries[piece][sq][captured][threats.contains(sq) as usize][see_good as usize] as i32
     }
 
-    pub fn update(&mut self, threats: Bitboard, piece: Piece, sq: Square, captured: PieceType, bonus: i32) {
-        let entry = &mut self.entries[piece][sq][captured][threats.contains(sq) as usize];
+    pub fn update(
+        &mut self, threats: Bitboard, piece: Piece, sq: Square, captured: PieceType, see_good: bool, bonus: i32,
+    ) {
+        let entry = &mut self.entries[piece][sq][captured][threats.contains(sq) as usize][see_good as usize];
         apply_bonus::<{ Self::MAX_HISTORY }>(entry, bonus);
     }
 }

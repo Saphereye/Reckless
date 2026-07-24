@@ -770,7 +770,13 @@ fn search<NODE: NodeType>(
             td.quiet_history.get(td.board.all_threats(), stm, mv) + td.conthist(ply, 1, mv) + td.conthist(ply, 2, mv)
         } else {
             let captured_type = td.board.type_on(mv.to());
-            td.noisy_history.get(td.board.all_threats(), td.board.moved_piece(mv), mv.to(), captured_type)
+            td.noisy_history.get(
+                td.board.all_threats(),
+                td.board.moved_piece(mv),
+                mv.to(),
+                captured_type,
+                td.board.see(mv, 0),
+            )
         };
 
         if !NODE::ROOT && !is_loss(best_score) {
@@ -1077,6 +1083,7 @@ fn search<NODE: NodeType>(
                 td.board.moved_piece(best_move),
                 best_move.to(),
                 td.board.type_on(best_move.to()),
+                td.board.see(best_move, 0),
                 noisy_bonus,
             );
         } else {
@@ -1105,6 +1112,7 @@ fn search<NODE: NodeType>(
                 td.board.moved_piece(mv),
                 mv.to(),
                 captured_type,
+                td.board.see(mv, 0),
                 -noisy_malus,
             );
         }
@@ -1147,6 +1155,7 @@ fn search<NODE: NodeType>(
                 td.board.piece_on(prior_move.to()),
                 prior_move.to(),
                 captured_type,
+                td.board.see(prior_move, 0),
                 bonus,
             );
         }
@@ -1345,6 +1354,7 @@ fn qsearch<NODE: NodeType>(td: &mut ThreadData, mut alpha: i32, beta: i32, ply: 
             td.board.moved_piece(best_move),
             best_move.to(),
             td.board.type_on(best_move.to()),
+            td.board.see(best_move, 0),
             bonus,
         );
     }
