@@ -2,7 +2,8 @@ use std::sync::atomic::{AtomicI16, Ordering};
 
 use crate::types::{Bitboard, Color, Move, Piece, PieceType, Square};
 
-type FromToHistory<T> = [[T; 64]; 64];
+// type FromToHistory<T> = [[T; 64]; 64];
+type FromToHistory = [[BetaEntry; 64]; 64];
 type PieceToHistory<T> = [[T; 64]; 13];
 type ContinuationHistoryType = [[[[PieceToHistory<i16>; 64]; 13]; 2]; 2];
 
@@ -79,23 +80,36 @@ fn apply_bonus<const MAX: i32>(entry: &mut i16, bonus: i32) {
     *entry += (bonus - bonus.abs() * (*entry) as i32 / MAX) as i16;
 }
 
+#[derive(Clone, Copy, Default)]
+struct BetaEntry {
+    successes: u16,
+    attempts: u16,
+}
+
 pub struct QuietHistory {
     // [side_to_move][from_threatened][to_threatened][from][to]
-    entries: Box<[[[FromToHistory<i16>; 2]; 2]; 2]>,
+    entries: Box<[[[FromToHistory; 2]; 2]; 2]>,
 }
 
 impl QuietHistory {
     const MAX_HISTORY: i32 = 8192;
 
+    const GAMMA_NUM: u32 = 819;
+    const GAMMA_DEN: u32 = 1024;
+
     pub fn get(&self, threats: Bitboard, stm: Color, mv: Move) -> i32 {
-        self.entries[stm][threats.contains(mv.from()) as usize][threats.contains(mv.to()) as usize][mv.from()][mv.to()]
-            as i32
+        let e = self.entries[stm][threats.contains(mv.from()) as usize][threats.contains(mv.to()) as usize][mv.from()]
+            [mv.to()];
+        2 * (e.successes as i32 + 1) * Self::MAX_HISTORY / (e.attempts as i32 + 2) - Self::MAX_HISTORY
     }
 
-    pub fn update(&mut self, threats: Bitboard, stm: Color, mv: Move, bonus: i32) {
-        let entry = &mut self.entries[stm][threats.contains(mv.from()) as usize][threats.contains(mv.to()) as usize]
+    pub fn update(&mut self, threats: Bitboard, stm: Color, mv: Move, weight: i32, success: bool) {
+        let w = weight.unsigned_abs();
+        let e = &mut self.entries[stm][threats.contains(mv.from()) as usize][threats.contains(mv.to()) as usize]
             [mv.from()][mv.to()];
-        apply_bonus::<{ Self::MAX_HISTORY }>(entry, bonus);
+        e.attempts = ((e.attempts as u32 * Self::GAMMA_NUM / Self::GAMMA_DEN) + w).min(u16::MAX as u32) as u16;
+        e.successes = ((e.successes as u32 * Self::GAMMA_NUM / Self::GAMMA_DEN) + if success { w } else { 0 })
+            .min(u16::MAX as u32) as u16;
     }
 }
 
