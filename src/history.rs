@@ -93,22 +93,23 @@ pub struct QuietHistory {
 
 impl QuietHistory {
     const MAX_HISTORY: i32 = 8192;
-
-    const GAMMA_NUM: u32 = 819;
-    const GAMMA_DEN: u32 = 1024;
+    const UNIT: u32 = 64;
+    const GAMMA_NUM: u32 = 15;
+    const GAMMA_DEN: u32 = 16;
+    const PRIOR_STRENGTH: i32 = 512;
 
     pub fn get(&self, threats: Bitboard, stm: Color, mv: Move) -> i32 {
         let e = self.entries[stm][threats.contains(mv.from()) as usize][threats.contains(mv.to()) as usize][mv.from()]
             [mv.to()];
-        2 * (e.successes as i32 + 1) * Self::MAX_HISTORY / (e.attempts as i32 + 2) - Self::MAX_HISTORY
+        Self::MAX_HISTORY * (2 * e.successes as i32 - e.attempts as i32) / (e.attempts as i32 + Self::PRIOR_STRENGTH)
     }
 
-    pub fn update(&mut self, threats: Bitboard, stm: Color, mv: Move, weight: i32, success: bool) {
-        let w = weight.unsigned_abs();
+    pub fn update(&mut self, threats: Bitboard, stm: Color, mv: Move, weight: i32, weight_max: i32, success: bool) {
+        let confidence = (weight.unsigned_abs().min(weight_max as u32) * Self::UNIT / weight_max as u32).max(1);
         let e = &mut self.entries[stm][threats.contains(mv.from()) as usize][threats.contains(mv.to()) as usize]
             [mv.from()][mv.to()];
-        e.attempts = ((e.attempts as u32 * Self::GAMMA_NUM / Self::GAMMA_DEN) + w).min(u16::MAX as u32) as u16;
-        e.successes = ((e.successes as u32 * Self::GAMMA_NUM / Self::GAMMA_DEN) + if success { w } else { 0 })
+        e.attempts = ((e.attempts as u32 * Self::GAMMA_NUM / Self::GAMMA_DEN) + Self::UNIT).min(u16::MAX as u32) as u16;
+        e.successes = ((e.successes as u32 * Self::GAMMA_NUM / Self::GAMMA_DEN) + if success { confidence } else { 0 })
             .min(u16::MAX as u32) as u16;
     }
 }

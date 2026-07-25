@@ -396,7 +396,7 @@ fn search<NODE: NodeType>(
                 let quiet_bonus = (190 * depth - 81).min(1691);
                 let cont_bonus = (96 * depth - 73).min(1206);
 
-                td.quiet_history.update(td.board.all_threats(), stm, tt_move, quiet_bonus, true);
+                td.quiet_history.update(td.board.all_threats(), stm, tt_move, quiet_bonus, 1691, true);
                 update_continuation_histories(td, ply, td.board.moved_piece(tt_move), tt_move.to(), cont_bonus);
             }
 
@@ -498,7 +498,7 @@ fn search<NODE: NodeType>(
         let value = 812 * (-(eval + td.stack[ply - 1].eval)) / 128;
         let bonus = value.clamp(-144, 324);
 
-        td.quiet_history.update(td.board.prior_threats(), !stm, td.stack[ply - 1].mv, bonus.abs(), bonus > 0);
+        td.quiet_history.update(td.board.prior_threats(), !stm, td.stack[ply - 1].mv, bonus.abs(), 324, bonus > 0);
     }
 
     // Hindsight reductions
@@ -1080,14 +1080,14 @@ fn search<NODE: NodeType>(
                 noisy_bonus,
             );
         } else {
-            td.quiet_history.update(td.board.all_threats(), stm, best_move, quiet_bonus, true);
+            td.quiet_history.update(td.board.all_threats(), stm, best_move, quiet_bonus, 1691, true);
             td.pawn_history.update(td.board.pawn_key(), td.board.moved_piece(best_move), best_move.to(), quiet_bonus);
             update_continuation_histories(td, ply, td.board.moved_piece(best_move), best_move.to(), cont_bonus);
 
             for (i, &mv) in quiet_moves.iter().enumerate() {
                 let denom = 1024 + 45 * i as i32;
                 let scale = 1024_i32 * 1024 / (denom * denom / 1024);
-                td.quiet_history.update(td.board.all_threats(), stm, mv, quiet_malus * scale / 1024, false);
+                td.quiet_history.update(td.board.all_threats(), stm, mv, quiet_malus * scale / 1024, 1099, false);
                 td.pawn_history.update(
                     td.board.pawn_key(),
                     td.board.moved_piece(mv),
@@ -1131,7 +1131,14 @@ fn search<NODE: NodeType>(
 
             let scaled_bonus = factor * (180 * depth - 37).min(2414) / 128;
 
-            td.quiet_history.update(td.board.prior_threats(), !stm, prior_move, scaled_bonus.abs(), scaled_bonus > 0);
+            td.quiet_history.update(
+                td.board.prior_threats(),
+                !stm,
+                prior_move,
+                scaled_bonus.abs(),
+                16539,
+                scaled_bonus > 0,
+            );
 
             let entry = &td.stack[ply - 2];
             if entry.mv.is_present() {
