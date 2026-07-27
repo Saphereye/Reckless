@@ -1,5 +1,5 @@
 [build]
-rustflags = ["-C", "target-cpu=native"]
+rustflags = ["-C", "target-cpu=native", "-C", "relocation-model=static"]
 
 [target.wasm32-unknown-unknown]
 # Note that `target.<...>.rustflags` takes precedence over `build.rustflags`.
