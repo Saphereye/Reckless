@@ -533,12 +533,19 @@ fn search<NODE: NodeType>(
 
     let improving = improvement > 0;
 
+    let tt_move_history = if tt_move.is_quiet() {
+        td.quiet_history.get(td.board.all_threats(), stm, tt_move)
+            + td.conthist(ply, 1, tt_move)
+            + td.conthist(ply, 2, tt_move)
+    } else {
+        0
+    };
+
     // Razoring
     if !NODE::PV
         && !in_check
-        && estimated_score < alpha - 237 - 254 * depth * depth
+        && estimated_score < alpha - 237 - 254 * depth * depth - (tt_move_history.max(0) / 256).min(400)
         && alpha < 2048
-        && !tt_move.is_quiet()
         && tt_bound != Bound::Lower
     {
         return qsearch::<NonPV>(td, alpha, beta, ply);
