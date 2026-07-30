@@ -533,6 +533,14 @@ fn search<NODE: NodeType>(
 
     let improving = improvement > 0;
 
+    let tt_move_history = if tt_move.is_quiet() {
+        td.quiet_history.get(td.board.all_threats(), stm, tt_move)
+            + td.conthist(ply, 1, tt_move)
+            + td.conthist(ply, 2, tt_move)
+    } else {
+        0
+    };
+
     // Razoring
     if !NODE::PV
         && !in_check
@@ -710,10 +718,10 @@ fn search<NODE: NodeType>(
 
         if singular_score < singular_beta {
             let double_margin = 195 * NODE::PV as i32 + 48 * (NODE::PV && !tt_was_pv) as i32
-                - 16 * tt_move.is_quiet() as i32
+                - (tt_move_history / 512).clamp(-28, 75)
                 - 16 * correction_value.abs() / 128;
             let triple_margin = 230 * NODE::PV as i32 + 56 * (NODE::PV && !tt_was_pv) as i32
-                - 19 * tt_move.is_quiet() as i32
+                - (tt_move_history / 512).clamp(-33, 89)
                 - 15 * correction_value.abs() / 128
                 + 36;
 
