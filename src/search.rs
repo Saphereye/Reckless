@@ -127,6 +127,7 @@ pub fn start(td: &mut ThreadData, report: Report, thread_count: usize) {
                 td.stack = Stack::new();
                 td.cutoff_count = PlyArray::default();
                 td.excluded = PlyArray::default();
+                td.extension_debt = PlyArray::default();
                 td.root_delta = beta - alpha;
 
                 // Root Search
@@ -720,6 +721,10 @@ fn search<NODE: NodeType>(
             extension = 1;
             extension += (singular_score < singular_beta - double_margin) as i32;
             extension += (singular_score < singular_beta - triple_margin) as i32;
+
+            if td.extension_debt[ply] > depth {
+                extension = extension.min(1);
+            }
         }
         // Multi-Cut
         else if singular_score >= beta && !is_decisive(singular_score) {
@@ -839,6 +844,7 @@ fn search<NODE: NodeType>(
         make_move(td, ply, mv);
 
         let mut new_depth = depth - 1 + if move_count == 1 { extension } else { 0 };
+        td.extension_debt[ply + 1] = td.extension_debt[ply] + if move_count == 1 { extension.max(0) } else { 0 };
         let mut score = Score::ZERO;
 
         // Late Move Reductions (LMR)
