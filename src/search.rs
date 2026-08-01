@@ -567,6 +567,7 @@ fn search<NODE: NodeType>(
         && !in_check
         && !excluded
         && !potential_singularity
+        && td.quiet_history.get(td.board.all_threats(), stm, tt_move) > -512
         && estimated_score
             >= beta
                 + (-9 * depth + 110 * tt_pv as i32
