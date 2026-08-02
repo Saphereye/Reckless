@@ -76,6 +76,13 @@ pub fn start(td: &mut ThreadData, report: Report, thread_count: usize) {
 
     // Iterative Deepening
     for depth in 1..MAX_PLY as i32 {
+        if td.id > 0 {
+            let cycle = (td.id as i32 - 1) % 4 + 1;
+            if depth % (cycle + 1) == cycle {
+                continue;
+            }
+        }
+
         if td.id == 0
             && let Limits::Depth(maximum) = td.time_manager.limits()
             && depth > maximum
