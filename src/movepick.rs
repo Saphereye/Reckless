@@ -196,9 +196,26 @@ impl MovePicker {
             Bitboard(0)
         };
 
+        let (prior_threatened, currently_threatened, threat_delta) = if ply > 0 {
+            let prior = td.board.prior_threats() & td.board.colors(side);
+            let current = threats & td.board.colors(side);
+            (prior, current, prior.popcount() as i32 - current.popcount() as i32)
+        } else {
+            (Bitboard(0), Bitboard(0), 0)
+        };
+
         for entry in self.list.iter_mut() {
             let mv = entry.mv;
             let pt = td.board.type_on(mv.from());
+
+            let threat_bonus = if threat_delta > 0 {
+                (threat_delta
+                    * 400
+                    * (prior_threatened.contains(mv.from()) as i32 - currently_threatened.contains(mv.to()) as i32))
+                .max(0)
+            } else {
+                0
+            };
 
             entry.score = 1763 * td.quiet_history.get(threats, side, mv) / 1024
                 + 1024 * td.pawn_history.get(pawn_key, td.board.moved_piece(mv), mv.to()) / 1024
@@ -210,7 +227,8 @@ impl MovePicker {
                 + 10723 * td.board.checking_squares(pt).contains(mv.to()) as i32
                 - 8875 * threatened[pt].contains(mv.to()) as i32
                 + 3446 * offense[pt].contains(mv.to()) as i32
-                - 4494 * wall_pawns.contains(mv.from()) as i32;
+                - 4494 * wall_pawns.contains(mv.from()) as i32
+                + threat_bonus;
         }
     }
 }
