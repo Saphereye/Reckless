@@ -481,6 +481,11 @@ fn search<NODE: NodeType>(
     };
 
     td.stack[ply].eval = eval;
+    td.eval_swing[ply] = if ply > 0 && is_valid(td.stack[ply - 1].eval) && !in_check {
+        -(eval + td.stack[ply - 1].eval)
+    } else {
+        0
+    };
     td.stack[ply].tt_move = tt_move;
     td.stack[ply].tt_pv = tt_pv;
     td.stack[ply].reduction = 0;

@@ -196,9 +196,24 @@ impl MovePicker {
             Bitboard(0)
         };
 
+        let swing = if ply > 0 && td.stack[ply - 1].mv.is_quiet() {
+            td.eval_swing[ply]
+        } else {
+            0
+        };
+
         for entry in self.list.iter_mut() {
             let mv = entry.mv;
             let pt = td.board.type_on(mv.from());
+
+            let swing_bonus = if swing != 0 {
+                let geo = offense[pt].contains(mv.to()) as i32
+                    + threatened[pt].contains(mv.from()) as i32
+                    - threatened[pt].contains(mv.to()) as i32;
+                (812 * swing / 128).clamp(-144, 324) * geo
+            } else {
+                0
+            };
 
             entry.score = 1763 * td.quiet_history.get(threats, side, mv) / 1024
                 + 1024 * td.pawn_history.get(pawn_key, td.board.moved_piece(mv), mv.to()) / 1024
@@ -210,7 +225,8 @@ impl MovePicker {
                 + 10723 * td.board.checking_squares(pt).contains(mv.to()) as i32
                 - 8875 * threatened[pt].contains(mv.to()) as i32
                 + 3446 * offense[pt].contains(mv.to()) as i32
-                - 4494 * wall_pawns.contains(mv.from()) as i32;
+                - 4494 * wall_pawns.contains(mv.from()) as i32
+                + swing_bonus;
         }
     }
 }
