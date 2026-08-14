@@ -493,12 +493,16 @@ fn search<NODE: NodeType>(
         && !excluded
         && td.stack[ply - 1].mv.is_quiet()
         && is_valid(td.stack[ply - 1].eval)
-        && (depth < 6 || entry.is_none())
     {
         let value = 812 * (-(eval + td.stack[ply - 1].eval)) / 128;
         let bonus = value.clamp(-144, 324);
 
-        td.quiet_history.update(td.board.prior_threats(), !stm, td.stack[ply - 1].mv, bonus);
+        if depth < 6
+            || entry.is_none()
+            || bonus > 144 && td.stack[ply - 1].move_count >= 2 && td.stack[ply - 1].mv != td.stack[ply - 1].tt_move
+        {
+            td.quiet_history.update(td.board.prior_threats(), !stm, td.stack[ply - 1].mv, bonus);
+        }
     }
 
     // Hindsight reductions
