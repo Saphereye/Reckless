@@ -1152,6 +1152,26 @@ fn search<NODE: NodeType>(
         }
     }
 
+    if !NODE::ROOT && bound == Bound::Lower && (cut_node || NODE::PV) {
+        let prior_move = td.stack[ply - 1].mv;
+        if prior_move.is_quiet() {
+            let malus = -((152 * depth - 47).max(0).min(1379));
+
+            td.quiet_history.update(td.board.prior_threats(), !stm, prior_move, malus);
+        } else if prior_move.is_noisy() {
+            let captured_type = td.board.captured_piece().piece_type();
+            let malus = -((50 * depth).min(654));
+
+            td.noisy_history.update(
+                td.board.prior_threats(),
+                td.board.piece_on(prior_move.to()),
+                prior_move.to(),
+                captured_type,
+                malus,
+            );
+        }
+    }
+
     tt_pv |= !NODE::ROOT && bound == Bound::Upper && move_count > 2 && td.stack[ply - 1].tt_pv;
 
     #[cfg(feature = "syzygy")]
