@@ -501,14 +501,12 @@ fn search<NODE: NodeType>(
         td.quiet_history.update(td.board.prior_threats(), !stm, td.stack[ply - 1].mv, bonus);
 
         let prior = &td.stack[ply - 1];
-        let prior_to = prior.mv.to();
-        if entry.is_none() && prior.piece.piece_type() != PieceType::Pawn && !prior.mv.is_promotion() {
-            let pawn_bonus = bonus * (1024 - correction_value.abs().min(512)) / 1024;
-            td.pawn_history.update(td.board.pawn_key(), prior.piece, prior_to, pawn_bonus);
-        }
-
-        if prior.mv.is_present() {
-            update_continuation_histories(td, ply - 1, prior.piece, prior_to, bonus);
+        if entry.is_none()
+            && prior.piece.piece_type() != PieceType::Pawn
+            && !prior.mv.is_promotion()
+            && bonus.abs() > 144
+        {
+            td.pawn_history.update(td.board.pawn_key(), prior.piece, prior.mv.to(), bonus);
         }
     }
 
