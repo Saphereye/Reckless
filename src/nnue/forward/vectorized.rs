@@ -131,16 +131,28 @@ pub unsafe fn propagate_l2(
     l1_out: &Aligned<[f32; L2_SIZE]>, bucket: usize, parameters: &Parameters,
 ) -> Aligned<[f32; L3_SIZE]> {
     let mut output = Aligned::new(parameters.l2_biases[bucket]);
+    let mut output_b = Aligned::new([0.0f32; L3_SIZE]);
 
-    for i in 0..L2_SIZE {
-        let input = simd::splat_f32(l1_out[i]);
-        let weights = parameters.l2_weights[bucket][i].as_ptr();
+    for i in (0..L2_SIZE).step_by(2) {
+        let input_a = simd::splat_f32(l1_out[i]);
+        let input_b = simd::splat_f32(l1_out[i + 1]);
+        let weights_a = parameters.l2_weights[bucket][i].as_ptr();
+        let weights_b = parameters.l2_weights[bucket][i + 1].as_ptr();
 
         for j in (0..L3_SIZE).step_by(simd::F32_LANES) {
-            let weights = *weights.add(j).cast();
-            let vector = output.as_mut_ptr().add(j).cast();
-            *vector = simd::mul_add_f32(weights, input, *vector);
+            let wa = *weights_a.add(j).cast();
+            let wb = *weights_b.add(j).cast();
+            let va = output.as_mut_ptr().add(j).cast();
+            let vb = output_b.as_mut_ptr().add(j).cast();
+            *va = simd::mul_add_f32(wa, input_a, *va);
+            *vb = simd::mul_add_f32(wb, input_b, *vb);
         }
+    }
+
+    for j in (0..L3_SIZE).step_by(simd::F32_LANES) {
+        let va = output.as_mut_ptr().add(j).cast();
+        let vb = *output_b.as_ptr().add(j).cast();
+        *va = simd::mul_add_f32(vb, simd::splat_f32(1.0), *va);
     }
 
     let zero = simd::zero_f32();
