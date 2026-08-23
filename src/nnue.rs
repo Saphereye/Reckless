@@ -379,6 +379,14 @@ impl Parameters {
 
         unsafe {
             std::ptr::copy_nonoverlapping(Self::embedded() as *const Self, ptr, 1);
+
+            #[cfg(target_os = "linux")]
+            {
+                let size = std::mem::size_of::<Self>();
+                libc::madvise(ptr.cast(), size, libc::MADV_HUGEPAGE);
+                libc::madvise(ptr.cast(), size, libc::MADV_COLLAPSE);
+            }
+
             Arc::from(Box::from_raw(ptr))
         }
     }
