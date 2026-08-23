@@ -384,7 +384,6 @@ impl Parameters {
             {
                 let size = std::mem::size_of::<Self>();
                 libc::madvise(ptr.cast(), size, libc::MADV_HUGEPAGE);
-                libc::madvise(ptr.cast(), size, libc::MADV_COLLAPSE);
             }
 
             Arc::from(Box::from_raw(ptr))
